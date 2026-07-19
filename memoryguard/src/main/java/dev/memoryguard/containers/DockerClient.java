@@ -102,6 +102,66 @@ public class DockerClient {
         return 0;
     }
 
+    public List<Integer> getContainerPids(String containerId) {
+        List<Integer> pids = new ArrayList<>();
+        try {
+            String httpResponse = sendGetRequest("/containers/" + containerId + "/top");
+            if (httpResponse == null) return pids;
+
+            int bodyStart = httpResponse.indexOf("\r\n\r\n");
+            if (bodyStart == -1) return pids;
+            String jsonBody = httpResponse.substring(bodyStart + 4);
+
+            JsonObject obj = JsonParser.parseString(jsonBody).getAsJsonObject();
+            JsonArray processes = obj.getAsJsonArray("Processes");
+            JsonArray titles = obj.getAsJsonArray("Titles");
+            
+            int pidIndex = -1;
+            for (int i = 0; i < titles.size(); i++) {
+                if (titles.get(i).getAsString().equalsIgnoreCase("PID")) {
+                    pidIndex = i;
+                    break;
+                }
+            }
+
+            if (pidIndex != -1 && processes != null) {
+                for (JsonElement procEl : processes) {
+                    JsonArray procArr = procEl.getAsJsonArray();
+                    String pidStr = procArr.get(pidIndex).getAsString();
+                    pids.add(Integer.parseInt(pidStr));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to get PIDs for container " + containerId + ": " + e.toString());
+        }
+        return pids;
+    }
+
+    public void injectMadvise(int pid) {
+        String injectorPath = "./madvise_injector";
+        if (Files.exists(Paths.get("/app/madvise_injector"))) {
+            injectorPath = "/app/madvise_injector";
+        } else if (Files.exists(Paths.get("target/madvise_injector"))) {
+            injectorPath = "target/madvise_injector";
+        }
+
+        try {
+            ProcessBuilder pb = new ProcessBuilder(injectorPath, String.valueOf(pid));
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            
+            int exitCode = p.waitFor();
+            String output = new String(p.getInputStream().readAllBytes()).trim();
+            if (exitCode == 0) {
+                System.out.println("[KSM-INJECT] " + output);
+            } else {
+                System.err.println("[KSM-INJECT-FAIL] Exit code: " + exitCode + ". Output: " + output);
+            }
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to run madvise_injector for PID " + pid + ": " + e.getMessage());
+        }
+    }
+
     private String sendGetRequest(String path) {
         try {
             UnixDomainSocketAddress address = UnixDomainSocketAddress.of(SOCKET_PATH);

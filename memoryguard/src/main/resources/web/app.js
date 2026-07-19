@@ -151,13 +151,13 @@ function updateUI(data) {
         manualFields.classList.remove('disabled-tuning');
     }
 
-    if (document.activeElement.id !== 'input-pages-to-scan') {
+    if (!document.activeElement || document.activeElement.id !== 'input-pages-to-scan') {
         document.getElementById('input-pages-to-scan').value = data.pagesToScan;
     }
-    if (document.activeElement.id !== 'input-sleep-ms') {
+    if (!document.activeElement || document.activeElement.id !== 'input-sleep-ms') {
         document.getElementById('input-sleep-ms').value = data.sleepMillisecs;
     }
-    if (document.activeElement.id !== 'input-zero-pages') {
+    if (!document.activeElement || document.activeElement.id !== 'input-zero-pages') {
         document.getElementById('input-zero-pages').checked = data.useZeroPages;
     }
 

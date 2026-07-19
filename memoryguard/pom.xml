@@ -93,6 +93,7 @@
                     <mainClass>dev.memoryguard.Main</mainClass>
                     <buildArgs>
                         <buildArg>--no-fallback</buildArg>
+                        <buildArg>-H:IncludeResources=web/.*</buildArg>
                     </buildArgs>
                 </configuration>
             </plugin>

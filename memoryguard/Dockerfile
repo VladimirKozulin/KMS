@@ -10,19 +10,23 @@ WORKDIR /build
 COPY pom.xml .
 COPY src ./src
 
-# Компилируем нативный исполняемый файл
+# Компилируем нативный исполняемый файл Java-агента
 RUN mvn clean package -Pnative
+
+# Компилируем C-хелпер madvise_injector
+RUN gcc -O2 -o target/madvise_injector src/main/c/madvise_injector.c
 
 # --- Этап 2: Создание минимального рантайм-образа ---
 FROM debian:bookworm-slim
 
-# Устанавливаем procps для возможности работы с процессами (если потребуется ps)
+# Устанавливаем procps для работы с процессами
 RUN apt-get update && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Копируем скомпилированный нативный бинарник из первого этапа
+# Копируем скомпилированные бинарники из первого этапа
 COPY --from=builder /build/target/memoryguard /app/memoryguard
+COPY --from=builder /build/target/madvise_injector /app/madvise_injector
 
 # Открываем порт для дашборда
 EXPOSE 8787

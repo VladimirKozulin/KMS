@@ -2,6 +2,7 @@ package dev.memoryguard.web;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import dev.memoryguard.ksm.KsmController;
@@ -58,7 +59,40 @@ public class ApiHandlers {
         }
 
         MetricsCollector.MetricsReport report = collector.collect();
-        String json = gson.toJson(report);
+        
+        // Ручная сборка JSON без рефлексии для совместимости с GraalVM Native
+        JsonObject obj = new JsonObject();
+        obj.addProperty("ksmSupported", report.ksmSupported);
+        obj.addProperty("ksmRunning", report.ksmRunning);
+        obj.addProperty("pagesShared", report.pagesShared);
+        obj.addProperty("pagesSharing", report.pagesSharing);
+        obj.addProperty("pagesUnshared", report.pagesUnshared);
+        obj.addProperty("pagesVolatile", report.pagesVolatile);
+        obj.addProperty("fullScans", report.fullScans);
+        obj.addProperty("sleepMillisecs", report.sleepMillisecs);
+        obj.addProperty("pagesToScan", report.pagesToScan);
+        obj.addProperty("useZeroPages", report.useZeroPages);
+        obj.addProperty("autoTune", report.autoTune);
+        obj.addProperty("systemTotalMemory", report.systemTotalMemory);
+        obj.addProperty("systemAvailableMemory", report.systemAvailableMemory);
+        obj.addProperty("systemMemoryUsagePercent", report.systemMemoryUsagePercent);
+        obj.addProperty("savedMemoryMb", report.savedMemoryMb);
+        obj.addProperty("monthlySavingsUsd", report.monthlySavingsUsd);
+
+        JsonArray arr = new JsonArray();
+        if (report.containers != null) {
+            for (dev.memoryguard.containers.DockerClient.ContainerInfo c : report.containers) {
+                JsonObject cObj = new JsonObject();
+                cObj.addProperty("id", c.id);
+                cObj.addProperty("name", c.name);
+                cObj.addProperty("image", c.image);
+                cObj.addProperty("memoryUsageBytes", c.memoryUsageBytes);
+                arr.add(cObj);
+            }
+        }
+        obj.add("containers", arr);
+
+        String json = obj.toString();
 
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);

@@ -28,6 +28,35 @@ public class Main {
         DockerClient dockerClient = new DockerClient();
         if (dockerClient.isDockerAvailable()) {
             System.out.println("[OK] Docker socket connection available.");
+            
+            // Запуск демона авто-инжектора MADV_MERGEABLE для контейнеров
+            Thread injectorThread = new Thread(() -> {
+                System.out.println("[OK] Container Madvise Injector daemon thread started.");
+                java.util.Set<Integer> processedPids = new java.util.HashSet<>();
+                while (true) {
+                    try {
+                        if (ksmController.isRunning()) {
+                            java.util.List<DockerClient.ContainerInfo> containers = dockerClient.getRunningContainers();
+                            for (DockerClient.ContainerInfo container : containers) {
+                                java.util.List<Integer> pids = dockerClient.getContainerPids(container.id);
+                                for (int pid : pids) {
+                                    if (!processedPids.contains(pid)) {
+                                        dockerClient.injectMadvise(pid);
+                                        processedPids.add(pid);
+                                    }
+                                }
+                            }
+                        }
+                        Thread.sleep(30000); // Сканирование контейнеров каждые 30 секунд
+                    } catch (InterruptedException e) {
+                        break;
+                    } catch (Exception e) {
+                        System.err.println("[ERROR] Exception in Container Madvise Injector daemon: " + e.getMessage());
+                    }
+                }
+            }, "ContainerMadviseInjectorThread");
+            injectorThread.setDaemon(true);
+            injectorThread.start();
         } else {
             System.out.println("[WARNING] Docker socket /var/run/docker.sock not found. Container discovery disabled.");
         }
