@@ -1,0 +1,9 @@
+dev/memoryguard/ksm/KsmTuner.class
+dev/memoryguard/ksm/KsmController.class
+dev/memoryguard/containers/DockerClient$ContainerInfo.class
+dev/memoryguard/web/ApiHandlers.class
+dev/memoryguard/metrics/MetricsCollector$MetricsReport.class
+dev/memoryguard/containers/DockerClient.class
+dev/memoryguard/Main.class
+dev/memoryguard/web/ApiServer.class
+dev/memoryguard/metrics/MetricsCollector.class
