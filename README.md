@@ -10,7 +10,7 @@
 
 ## MemoryGuard — Агент оптимизации оперативной памяти
 
-Наш сервис автоматически управляет дедупликацией ОЗУ на Linux-хостах (KSM) и предоставляет интерактивный веб-дашборд.
+Наш сервис автоматически управляет дедупликацией ОЗУ на Linux-хостах (KSM) через динамический ptrace-инжектор и предоставляет интерактивный веб-дашборд.
 
 ### Быстрый запуск через Docker
 
@@ -23,12 +23,15 @@ docker build -t memoryguard:latest .
 ```
 
 #### 2. Запуск контейнера
-Контейнеру требуются привилегированные права для управления KSM ядра хост-машины и доступ к сокету Docker:
+Контейнеру требуются привилегированные права, доступ к пространству PID хоста (`--pid=host`) и разрешения на трассировку процессов (`SYS_PTRACE`) для работы авто-инжектора:
 ```bash
 docker run -d \
   --name memoryguard \
   --privileged \
-  -v /sys/kernel/mm/ksm:/sys/kernel/mm/ksm \
+  --pid=host \
+  --cap-add=SYS_PTRACE \
+  --security-opt seccomp=unconfined \
+  -v /sys:/sys \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -p 8787:8787 \
   memoryguard:latest
