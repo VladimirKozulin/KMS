@@ -25,7 +25,7 @@ docker build -t memoryguard:latest .
 #### 2. Запуск контейнера
 Контейнеру требуются привилегированные права, доступ к пространству PID хоста (`--pid=host`) и разрешения на трассировку процессов (`SYS_PTRACE`) для работы авто-инжектора:
 ```bash
-docker run -d \
+MSYS_NO_PATHCONV=1 docker run -d \
   --name memoryguard \
   --privileged \
   --pid=host \
