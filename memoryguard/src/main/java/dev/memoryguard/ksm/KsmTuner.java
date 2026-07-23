@@ -3,15 +3,36 @@ package dev.memoryguard.ksm;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.util.List;
 
 public class KsmTuner implements Runnable {
     private final KsmController ksmController;
-    private boolean autoTune = true;
+    private volatile boolean autoTune = true;
     private volatile boolean running = true;
 
+    // ============================================================
+    // KSM Side-Channel Mitigation: Anti-Timing Protection
+    // ============================================================
+    private final SecureRandom secureRandom = new SecureRandom();
+    private final KsmAnomalyDetector anomalyDetector;
+
+    // Periodic unmerge — destroys any timing channel the attacker may have built
+    private int unmergeCountdown = 0;
+    private static final int UNMERGE_CYCLE_MIN = 20;  // ~5 min at 15s tick
+    private static final int UNMERGE_CYCLE_MAX = 60;  // ~15 min at 15s tick
+
+    // Jitter bounds for the tuner sleep interval (milliseconds)
+    private static final int TUNE_INTERVAL_MIN_MS = 12000;
+    private static final int TUNE_INTERVAL_JITTER_MS = 8000;
+
     public KsmTuner(KsmController ksmController) {
+        this(ksmController, null);
+    }
+
+    public KsmTuner(KsmController ksmController, KsmAnomalyDetector anomalyDetector) {
         this.ksmController = ksmController;
+        this.anomalyDetector = anomalyDetector;
     }
 
     public void setAutoTune(boolean autoTune) {
@@ -28,17 +49,72 @@ public class KsmTuner implements Runnable {
 
     @Override
     public void run() {
+        resetUnmergeCountdown();
         while (running) {
             if (autoTune && ksmController.isRunning()) {
                 tune();
+
+                // === Anomaly detection ===
+                if (anomalyDetector != null) {
+                    KsmAnomalyDetector.AnomalyReport report = anomalyDetector.check();
+                    if (report.suspicious) {
+                        System.err.println("[SECURITY] " + report.reason);
+                        // Emergency response: unmerge immediately to kill timing channel
+                        performPeriodicUnmerge();
+                        resetUnmergeCountdown();
+                        // Slow down KSM scanning to make re-attack harder
+                        try {
+                            ksmController.setSleepMillisecs(200);
+                            ksmController.setPagesToScan(50);
+                            System.out.println("[SECURITY] Emergency: KSM slowed down (sleep=200ms, scan=50)");
+                        } catch (IOException e) {
+                            // best-effort
+                        }
+                    }
+                }
+
+                // === Periodic unmerge countdown ===
+                if (--unmergeCountdown <= 0) {
+                    performPeriodicUnmerge();
+                    resetUnmergeCountdown();
+                }
             }
             try {
-                Thread.sleep(15000); // Check and tune every 15 seconds
+                // Randomized interval (12-20 sec) — prevents attacker synchronization
+                int jitter = TUNE_INTERVAL_MIN_MS + secureRandom.nextInt(TUNE_INTERVAL_JITTER_MS);
+                Thread.sleep(jitter);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
             }
         }
+    }
+
+    /**
+     * Periodic unmerge + re-scan cycle.
+     * Writes "2" to /sys/kernel/mm/ksm/run which forces the kernel to
+     * unmerge ALL currently shared pages. After a random pause, KSM is
+     * re-enabled. This destroys any timing channel an attacker has built,
+     * forcing them to restart their measurement — but the next scan cycle
+     * will use different intervals due to randomization.
+     */
+    private void performPeriodicUnmerge() {
+        try {
+            // run=2 → unmerge all currently shared pages
+            ksmController.writeString("run", "2");
+            // Random pause before re-enabling (0.5 - 1.0 sec)
+            Thread.sleep(500 + secureRandom.nextInt(500));
+            // run=1 → restart KSM scanning
+            ksmController.setRunning(true);
+            System.out.println("[SECURITY] Periodic unmerge completed — timing channels disrupted");
+        } catch (Exception e) {
+            System.err.println("[SECURITY] Unmerge cycle failed: " + e.getMessage());
+        }
+    }
+
+    private void resetUnmergeCountdown() {
+        unmergeCountdown = UNMERGE_CYCLE_MIN
+                + secureRandom.nextInt(UNMERGE_CYCLE_MAX - UNMERGE_CYCLE_MIN);
     }
 
     private void tune() {
@@ -50,22 +126,35 @@ public class KsmTuner implements Runnable {
             long available = memInfo[1];
             double freePercentage = (double) available / total * 100.0;
 
-            // Simple adaptive logic:
+            // Base parameters for each pressure level
+            int baseScan;
+            int baseSleep;
+
             // High memory pressure (available memory < 20%): scan aggressively
             if (freePercentage < 20.0) {
-                ksmController.setPagesToScan(500);
-                ksmController.setSleepMillisecs(10);
+                baseScan = 500;
+                baseSleep = 10;
             }
             // Moderate pressure (20% - 50%): scan moderately
             else if (freePercentage < 50.0) {
-                ksmController.setPagesToScan(200);
-                ksmController.setSleepMillisecs(20);
+                baseScan = 200;
+                baseSleep = 20;
             }
             // Low pressure (> 50%): scan slowly to save CPU
             else {
-                ksmController.setPagesToScan(100);
-                ksmController.setSleepMillisecs(50);
+                baseScan = 100;
+                baseSleep = 50;
             }
+
+            // === Anti-timing: add ±30% jitter to KSM parameters ===
+            int scanJitter = Math.max(1, (int) (baseScan * 0.3));
+            int sleepJitter = Math.max(1, (int) (baseSleep * 0.3));
+
+            int actualScan = baseScan - scanJitter + secureRandom.nextInt(scanJitter * 2 + 1);
+            int actualSleep = baseSleep - sleepJitter + secureRandom.nextInt(sleepJitter * 2 + 1);
+
+            ksmController.setPagesToScan(Math.max(50, actualScan));
+            ksmController.setSleepMillisecs(Math.max(5, actualSleep));
         } catch (Exception e) {
             // Ignore tuning errors in background
         }
