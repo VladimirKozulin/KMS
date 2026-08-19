@@ -58,25 +58,8 @@ public class KsmTuner implements Runnable {
                 if (anomalyDetector != null) {
                     KsmAnomalyDetector.AnomalyReport report = anomalyDetector.check();
                     if (report.suspicious) {
-                        System.err.println("[SECURITY] " + report.reason);
-                        // Emergency response: unmerge immediately to kill timing channel
-                        performPeriodicUnmerge();
-                        resetUnmergeCountdown();
-                        // Slow down KSM scanning to make re-attack harder
-                        try {
-                            ksmController.setSleepMillisecs(200);
-                            ksmController.setPagesToScan(50);
-                            System.out.println("[SECURITY] Emergency: KSM slowed down (sleep=200ms, scan=50)");
-                        } catch (IOException e) {
-                            // best-effort
-                        }
+                        System.err.println("[SECURITY-WARN] " + report.reason);
                     }
-                }
-
-                // === Periodic unmerge countdown ===
-                if (--unmergeCountdown <= 0) {
-                    performPeriodicUnmerge();
-                    resetUnmergeCountdown();
                 }
             }
             try {

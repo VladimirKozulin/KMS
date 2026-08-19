@@ -33,12 +33,13 @@ public class KsmAnomalyDetector {
 
     // Smoothing factor: 0.2 = new value has 20% weight
     private static final double ALPHA = 0.2;
-    // Anomaly threshold: spike must be > 3x the running average
-    private static final double ANOMALY_THRESHOLD = 3.0;
+    // Anomaly Threshold: a spike is flagged if current rate > baseline * ANOMALY_THRESHOLD
+    // Raised to 25.0 for real microservice workloads with high concurrency
+    private static final double ANOMALY_THRESHOLD = 25.0;
     // Minimum ticks before anomaly detection activates (builds baseline)
     private static final int WARMUP_TICKS = 5;
     // Minimum pages_sharing before volatile ratio check is meaningful
-    private static final int MIN_SHARING_FOR_RATIO = 100;
+    private static final long MIN_SHARING_FOR_RATIO = 5000;
     // Volatile/sharing ratio that triggers an alert
     private static final double VOLATILE_RATIO_ALERT = 0.5;
 
