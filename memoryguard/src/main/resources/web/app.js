@@ -127,8 +127,6 @@ function updateUI(data) {
     const percentOfTotal = totalSystemMemoryMb > 0 ? (data.savedMemoryMb / totalSystemMemoryMb * 100) : 0;
     document.getElementById('val-saved-percent').innerText = percentOfTotal.toFixed(2) + '% от всей памяти хоста';
 
-    document.getElementById('val-savings-usd').innerText = '$' + data.monthlySavingsUsd.toFixed(2);
-
     document.getElementById('val-sys-usage').innerText = data.systemMemoryUsagePercent.toFixed(1) + '%';
     const totalGb = data.systemTotalMemory / 1024 / 1024 / 1024;
     const availGb = data.systemAvailableMemory / 1024 / 1024 / 1024;
