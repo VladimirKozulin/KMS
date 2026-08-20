@@ -45,18 +45,13 @@ public class Main {
             System.out.println("[OK] Docker socket connection available.");
             
             // Log whitelist configuration
-            String whitelist = System.getenv("MEMORYGUARD_CONTAINER_WHITELIST");
-            if (whitelist == null || whitelist.trim().isEmpty()) {
-                System.out.println("[SECURITY] MEMORYGUARD_CONTAINER_WHITELIST not set — " +
-                        "deny-by-default: no containers will be injected with MADV_MERGEABLE.");
-                System.out.println("[SECURITY] Set MEMORYGUARD_CONTAINER_WHITELIST=nginx,redis,... " +
-                        "to enable injection for trusted containers only.");
-            } else if ("*".equals(whitelist.trim())) {
-                System.out.println("[SECURITY] MEMORYGUARD_CONTAINER_WHITELIST=* — " +
-                        "ALL containers will be injected (reduced security).");
+            String excludeList = System.getenv("MEMORYGUARD_EXCLUDE_CONTAINERS");
+            if (excludeList == null) excludeList = System.getenv("MEMORYGUARD_BLACKLIST");
+
+            if (excludeList != null && !excludeList.trim().isEmpty()) {
+                System.out.println("[CONFIG] Excluded containers from optimization: " + excludeList);
             } else {
-                System.out.println("[SECURITY] MEMORYGUARD_CONTAINER_WHITELIST=" + whitelist +
-                        " — only matching containers will be injected.");
+                System.out.println("[CONFIG] MemoryGuard will optimize ALL running containers on host by default.");
             }
             
             // Запуск демона авто-инжектора MADV_MERGEABLE для контейнеров

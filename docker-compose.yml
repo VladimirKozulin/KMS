@@ -1,0 +1,27 @@
+services:
+  memoryguard:
+    build:
+      context: ./memoryguard
+      dockerfile: Dockerfile
+    image: memoryguard:latest
+    container_name: memoryguard
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      # По умолчанию оптимизируются ВСЕ контейнеры на хосте.
+      # Если нужно исключить определенные сервисы, укажите их через запятую:
+      # - MEMORYGUARD_EXCLUDE_CONTAINERS=vault,postgres,payment-gateway
+      - MEMORYGUARD_EXCLUDE_CONTAINERS=
+    volumes:
+      # Доступ к подсистеме KSM ядра Linux
+      - /sys:/sys
+      # Доступ к Docker Engine для отслеживания PID контейнеров
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      # Встроенный дашборд и REST API метрик
+      - "8787:8787"

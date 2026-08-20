@@ -46,33 +46,46 @@ public class DockerClient {
 
     /**
      * Checks whether a container is trusted for KSM injection.
-     * Deny-by-default: if MEMORYGUARD_CONTAINER_WHITELIST is not set,
-     * NO containers are injected.
+     * Default: ALL containers are optimized unless explicitly excluded
+     * via MEMORYGUARD_EXCLUDE_CONTAINERS (or MEMORYGUARD_BLACKLIST).
      *
      * @param container the container to check
-     * @return true if the container is explicitly whitelisted
+     * @return true if the container should be optimized, false if excluded
      */
     public boolean isContainerTrusted(ContainerInfo container) {
+        // 1. Check blacklist / exclude list
+        String blacklist = System.getenv("MEMORYGUARD_EXCLUDE_CONTAINERS");
+        if (blacklist == null || blacklist.trim().isEmpty()) {
+            blacklist = System.getenv("MEMORYGUARD_BLACKLIST");
+        }
+
+        if (blacklist != null && !blacklist.trim().isEmpty() && !"none".equalsIgnoreCase(blacklist.trim())) {
+            String[] blocked = blacklist.split(",");
+            for (String pattern : blocked) {
+                pattern = pattern.trim();
+                if (pattern.isEmpty()) continue;
+                if (container.name.contains(pattern) || container.image.contains(pattern)) {
+                    return false; // Excluded!
+                }
+            }
+        }
+
+        // 2. Backward compatibility: if explicit whitelist is set and not "*", check it
         String whitelist = System.getenv("MEMORYGUARD_CONTAINER_WHITELIST");
-        if (whitelist == null || whitelist.trim().isEmpty()) {
-            // Deny-by-default: no whitelist = no injection
+        if (whitelist != null && !whitelist.trim().isEmpty() && !"*".equals(whitelist.trim()) && !"all".equalsIgnoreCase(whitelist.trim())) {
+            String[] allowed = whitelist.split(",");
+            for (String pattern : allowed) {
+                pattern = pattern.trim();
+                if (pattern.isEmpty()) continue;
+                if (container.name.contains(pattern) || container.image.contains(pattern)) {
+                    return true;
+                }
+            }
             return false;
         }
 
-        // Special value "*" means trust all (opt-in to old behavior)
-        if ("*".equals(whitelist.trim())) {
-            return true;
-        }
-
-        String[] allowed = whitelist.split(",");
-        for (String pattern : allowed) {
-            pattern = pattern.trim();
-            if (pattern.isEmpty()) continue;
-            if (container.name.contains(pattern) || container.image.contains(pattern)) {
-                return true;
-            }
-        }
-        return false;
+        // Default: optimize all containers
+        return true;
     }
 
     /**
