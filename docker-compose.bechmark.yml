@@ -1,14 +1,16 @@
+name: demo
+
 services:
-  # 1. Кэш корзины (In-Memory Redis)
+  # 1. In-Memory Redis Cache
   redis-cart:
     image: redis:alpine
-    container_name: demo-redis-cart
     restart: unless-stopped
+    deploy:
+      replicas: 2
 
-  # 2. Сервис корзины (.NET)
+  # 2. Cart Service (.NET 7)
   cartservice:
     image: gcr.io/google-samples/microservices-demo/cartservice:v0.8.0
-    container_name: demo-cartservice
     environment:
       - REDIS_ADDR=redis-cart:6379
       - PORT=7070
@@ -17,51 +19,56 @@ services:
     depends_on:
       - redis-cart
     restart: unless-stopped
+    deploy:
+      replicas: 4
 
-  # 3. Сервис каталога товаров (Golang)
+  # 3. Product Catalog Service (Golang)
   productcatalogservice:
     image: gcr.io/google-samples/microservices-demo/productcatalogservice:v0.8.0
-    container_name: demo-productcatalogservice
     environment:
       - PORT=3550
       - DISABLE_PROFILER=1
       - DISABLE_TRACING=1
     restart: unless-stopped
+    deploy:
+      replicas: 4
 
-  # 4. Сервис валют (Node.js)
+  # 4. Currency Service (Node.js)
   currencyservice:
     image: gcr.io/google-samples/microservices-demo/currencyservice:v0.8.0
-    container_name: demo-currencyservice
     environment:
       - PORT=7000
       - DISABLE_PROFILER=1
       - DISABLE_TRACING=1
     restart: unless-stopped
+    deploy:
+      replicas: 4
 
-  # 5. Сервис доставки (Golang)
+  # 5. Shipping Service (Golang)
   shippingservice:
     image: gcr.io/google-samples/microservices-demo/shippingservice:v0.8.0
-    container_name: demo-shippingservice
     environment:
       - PORT=50051
       - DISABLE_PROFILER=1
       - DISABLE_TRACING=1
     restart: unless-stopped
+    deploy:
+      replicas: 3
 
-  # 6. Сервис оплаты (Node.js)
+  # 6. Payment Service (Node.js)
   paymentservice:
     image: gcr.io/google-samples/microservices-demo/paymentservice:v0.8.0
-    container_name: demo-paymentservice
     environment:
       - PORT=50051
       - DISABLE_PROFILER=1
       - DISABLE_TRACING=1
     restart: unless-stopped
+    deploy:
+      replicas: 3
 
-  # 7. Сервис оформления заказов (Golang)
+  # 7. Checkout Service (Golang)
   checkoutservice:
     image: gcr.io/google-samples/microservices-demo/checkoutservice:v0.8.0
-    container_name: demo-checkoutservice
     environment:
       - PORT=5050
       - PRODUCT_CATALOG_SERVICE_ADDR=productcatalogservice:3550
@@ -79,21 +86,23 @@ services:
       - currencyservice
       - cartservice
     restart: unless-stopped
+    deploy:
+      replicas: 3
 
-  # 8. Сервис email уведомлений (Python)
+  # 8. Email Service (Python)
   emailservice:
     image: gcr.io/google-samples/microservices-demo/emailservice:v0.8.0
-    container_name: demo-emailservice
     environment:
       - PORT=8080
       - DISABLE_PROFILER=1
       - DISABLE_TRACING=1
     restart: unless-stopped
+    deploy:
+      replicas: 4
 
-  # 9. Сервис рекомендаций (Python)
+  # 9. Recommendation Service (Python)
   recommendationservice:
     image: gcr.io/google-samples/microservices-demo/recommendationservice:v0.8.0
-    container_name: demo-recommendationservice
     environment:
       - PORT=8080
       - PRODUCT_CATALOG_SERVICE_ADDR=productcatalogservice:3550
@@ -102,21 +111,24 @@ services:
     depends_on:
       - productcatalogservice
     restart: unless-stopped
+    deploy:
+      replicas: 4
 
-  # 10. Сервис рекламы (Java)
+  # 10. Ad Service (Java 17 G1GC + AlwaysPreTouch for guaranteed physical RSS allocation)
   adservice:
     image: gcr.io/google-samples/microservices-demo/adservice:v0.8.0
-    container_name: demo-adservice
     environment:
       - PORT=9555
       - DISABLE_PROFILER=1
       - DISABLE_TRACING=1
+      - JAVA_TOOL_OPTIONS=-Xms750m -Xmx750m -XX:+AlwaysPreTouch -XX:+UseG1GC
     restart: unless-stopped
+    deploy:
+      replicas: 10
 
   # 11. Frontend / Web UI (Golang)
   frontend:
     image: gcr.io/google-samples/microservices-demo/frontend:v0.8.0
-    container_name: demo-frontend
     environment:
       - PORT=8080
       - PRODUCT_CATALOG_SERVICE_ADDR=productcatalogservice:3550
@@ -129,7 +141,7 @@ services:
       - DISABLE_PROFILER=1
       - DISABLE_TRACING=1
     ports:
-      - "8080:8080"
+      - "9090:8080"
     depends_on:
       - cartservice
       - productcatalogservice
@@ -139,14 +151,15 @@ services:
       - checkoutservice
       - adservice
     restart: unless-stopped
+    deploy:
+      replicas: 1
 
-  # 12. Автоматический генератор нагрузки (Python Locust)
+  # 12. Load Generator (Python Locust)
   loadgenerator:
     image: gcr.io/google-samples/microservices-demo/loadgenerator:v0.8.0
-    container_name: demo-loadgenerator
     environment:
       - FRONTEND_ADDR=frontend:8080
-      - USERS=10
+      - USERS=50
     depends_on:
       - frontend
     restart: unless-stopped
