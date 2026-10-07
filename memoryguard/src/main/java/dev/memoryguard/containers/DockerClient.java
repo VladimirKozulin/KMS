@@ -28,7 +28,16 @@ public class DockerClient {
         public String image;
         public long memoryUsageBytes;
         public java.util.Map<String, String> labels = new java.util.HashMap<>();
+        /**
+         * Every name this container's image is known by. The "Image" field of
+         * /containers/json degrades to a bare "sha256:..." ID as soon as the tag
+         * moves (re-pull, retag) — name-based rules must also see Config.Image.
+         */
+        public java.util.Set<String> imageRefs = new java.util.LinkedHashSet<>();
     }
+
+    // Config.Image never changes for a container → cache it by container ID
+    private final java.util.Map<String, String> configImageCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final TrustPolicy trustPolicy = TrustPolicy.fromEnv();
 
@@ -103,15 +112,44 @@ public class DockerClient {
                     }
                 }
 
+                info.imageRefs.add(info.image);
+                String configImage = getConfigImage(info.id);
+                if (configImage != null) {
+                    info.imageRefs.add(configImage);
+                }
+
                 info.memoryUsageBytes = getContainerMemoryUsage(info.id);
                 list.add(info);
             }
+            configImageCache.keySet().retainAll(list.stream().map(c -> c.id).toList());
         } catch (Exception e) {
             System.err.println("[ERROR] Failed to get running containers: " + e.toString());
             e.printStackTrace();
         }
 
         return list;
+    }
+
+    /** The image reference the container was created from (GET /containers/{id}/json → Config.Image). */
+    private String getConfigImage(String containerId) {
+        if (!isValidContainerId(containerId)) return null;
+        String cached = configImageCache.get(containerId);
+        if (cached != null) return cached;
+        try {
+            String httpResponse = sendGetRequest("/containers/" + containerId + "/json");
+            if (httpResponse == null) return null;
+            int bodyStart = httpResponse.indexOf("\r\n\r\n");
+            if (bodyStart == -1) return null;
+            JsonObject obj = JsonParser.parseString(httpResponse.substring(bodyStart + 4)).getAsJsonObject();
+            JsonObject config = obj.getAsJsonObject("Config");
+            if (config == null || config.get("Image") == null || config.get("Image").isJsonNull()) return null;
+            String image = config.get("Image").getAsString();
+            configImageCache.put(containerId, image);
+            return image;
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to inspect container " + containerId + ": " + e);
+            return null;
+        }
     }
 
     private long getContainerMemoryUsage(String containerId) {

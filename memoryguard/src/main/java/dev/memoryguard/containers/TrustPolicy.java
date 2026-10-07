@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -40,7 +41,29 @@ public final class TrustPolicy {
             "mysql", "mariadb", "postgres", "mongo", "cassandra", "elasticsearch",
             "vault", "keycloak", "etcd", "consul");
 
-    public record Decision(boolean trusted, String reason) {}
+    /**
+     * Process names (/proc/PID/comm, max 15 chars) of data stores. An image name
+     * can be anything — a retag, a private registry path, a bare sha256 ID — but
+     * the binary that runs is what keeps attacker-controlled data in memory.
+     */
+    static final Set<String> DATA_STORE_PROCESSES = Set.of(
+            "redis-server", "valkey-server", "keydb-server", "memcached", "dragonfly",
+            "mysqld", "mariadbd", "postgres", "mongod", "etcd", "vault", "consul");
+
+    /**
+     * @param explicitOptIn the container was allowed via a trusted label, so its
+     *                      data-store processes may be merged too
+     */
+    public record Decision(boolean trusted, String reason, boolean explicitOptIn) {
+        Decision(boolean trusted, String reason) {
+            this(trusted, reason, false);
+        }
+    }
+
+    /** Per-process check, applied to every PID of a trusted container. */
+    public static boolean isDataStoreProcess(String comm) {
+        return comm != null && DATA_STORE_PROCESSES.contains(comm.trim());
+    }
 
     private final List<String> whitelistGlobs;
     private final List<Pattern> whitelist;
@@ -94,8 +117,12 @@ public final class TrustPolicy {
         if ("false".equalsIgnoreCase(ksmLabel)) {
             return new Decision(false, "opted out via label " + LABEL_KSM + "=false");
         }
+        Set<String> refs = (c.imageRefs == null || c.imageRefs.isEmpty())
+                ? Set.of(String.valueOf(c.image)) : c.imageRefs;
+
         for (int i = 0; i < exclude.size(); i++) {
-            if (exclude.get(i).matcher(c.name).matches() || exclude.get(i).matcher(c.image).matches()) {
+            Pattern ex = exclude.get(i);
+            if (ex.matcher(c.name).matches() || refs.stream().anyMatch(r -> ex.matcher(r).matches())) {
                 return new Decision(false, "excluded by MEMORYGUARD_EXCLUDE_CONTAINERS " + excludeGlobs.get(i));
             }
         }
@@ -106,14 +133,16 @@ public final class TrustPolicy {
         }
 
         boolean labelOptIn = trustLabels && "true".equalsIgnoreCase(ksmLabel);
-        String repo = imageRepository(c.image);
-        if (!labelOptIn && denyImages.contains(repo)) {
-            return new Decision(false, "image '" + repo + "' holds attacker-controlled data "
-                    + "(remote dedup risk); override with label " + LABEL_KSM + "=true + MEMORYGUARD_TRUST_LABELS=true");
+        for (String ref : refs) {
+            String repo = imageRepository(ref);
+            if (!labelOptIn && denyImages.contains(repo)) {
+                return new Decision(false, "image '" + repo + "' holds attacker-controlled data "
+                        + "(remote dedup risk); override with label " + LABEL_KSM + "=true + MEMORYGUARD_TRUST_LABELS=true");
+            }
         }
 
         if (labelOptIn) {
-            return new Decision(true, "label " + LABEL_KSM + "=true");
+            return new Decision(true, "label " + LABEL_KSM + "=true", true);
         }
         if (trustAll) {
             return new Decision(true, "whitelist=*");
@@ -122,7 +151,9 @@ public final class TrustPolicy {
             Pattern p = whitelist.get(i);
             String glob = whitelistGlobs.get(i);
             if (p.matcher(c.name).matches()) return new Decision(true, "whitelist name " + glob);
-            if (p.matcher(c.image).matches()) return new Decision(true, "whitelist image " + glob);
+            for (String ref : refs) {
+                if (p.matcher(ref).matches()) return new Decision(true, "whitelist image " + glob);
+            }
         }
         return new Decision(false, "not whitelisted");
     }

@@ -10,16 +10,26 @@ package dev.memoryguard.ksm;
  *   typically caused by an attacker writing to merged pages to
  *   measure timing differences (CoW timing attack).
  *
- * - Rapid growth of pages_sharing: indicates an attacker creating
- *   many pages with guessed content to trigger merges (memory probing /
- *   application fingerprinting).
+ * - Mass drop of pages_sharing: many merged pages broken by writes in one
+ *   tick — the CoW-probe pattern (merge, then write to time the fault).
  *
- * - High volatile/sharing ratio: in normal operation, volatile pages
- *   are < 10% of sharing. During an attack, the attacker writes to
- *   merged pages rapidly, causing the ratio to spike > 50%.
+ * NOT a signal: growth of pages_sharing. That is KSM doing its job — after
+ * start, after every unmerge and whenever new replicas are deployed. A probing
+ * attacker produces one merge per correct guess, not 100k-page jumps. The
+ * first version alerted on growth and froze ksmd on its own convergence
+ * (experiment 3, run 1: 2026-10-07 11:50:40).
  *
- * Uses Exponential Moving Average (EMA) to build a baseline and
- * detects anomalies at > 3 standard deviations from the norm.
+ * Removed: the volatile/sharing ratio rule. With use_zero_pages=1 the savings
+ * are counted in ksm_zero_pages, not pages_sharing, while pages_volatile is in
+ * the millions on any GC'd heap — the ratio hit 61997% on a healthy host
+ * (experiment 3, run 2) and froze ksmd.
+ *
+ * Limits: these are host-wide counters. They cannot attribute activity to a
+ * container nor separate a careful attacker from GC churn, so by default the
+ * tuner only LOGS anomalies (MEMORYGUARD_ANOMALY_ACTION=respond to act on them).
+ *
+ * Uses Exponential Moving Average (EMA) to build a baseline; a rate above
+ * ANOMALY_THRESHOLD × baseline is flagged.
  */
 public class KsmAnomalyDetector {
     private final KsmController ksmController;
@@ -30,6 +40,8 @@ public class KsmAnomalyDetector {
     private int prevPagesVolatile = 0;
     private int prevPagesSharing = 0;
     private int tickCount = 0;
+    // full_scans value when the detector was (re)armed; -1 = not yet read
+    private int armedAtFullScans = -1;
 
     // Smoothing factor: 0.2 = new value has 20% weight
     private static final double ALPHA = 0.2;
@@ -38,10 +50,14 @@ public class KsmAnomalyDetector {
     private static final double ANOMALY_THRESHOLD = 25.0;
     // Minimum ticks before anomaly detection activates (builds baseline)
     private static final int WARMUP_TICKS = 5;
-    // Minimum pages_sharing before volatile ratio check is meaningful
+    // KSM merges a page only on its 2nd stable encounter, so the first full
+    // scans after start/unmerge are a burst of legitimate merges. Stay silent
+    // until this many full scans have completed since (re)arming.
+    static final int CONVERGENCE_FULL_SCANS = 3;
+    // Fraction of merged pages broken within one tick that counts as mass CoW
+    private static final double MASS_UNMERGE_FRACTION = 0.25;
+    // Minimum pages_sharing before the mass-drop rule is meaningful
     private static final long MIN_SHARING_FOR_RATIO = 5000;
-    // Volatile/sharing ratio that triggers an alert
-    private static final double VOLATILE_RATIO_ALERT = 0.5;
 
     public KsmAnomalyDetector(KsmController ksmController) {
         this.ksmController = ksmController;
@@ -89,6 +105,9 @@ public class KsmAnomalyDetector {
     public AnomalyReport check() {
         int currentVolatile = ksmController.getPagesVolatile();
         int currentSharing = ksmController.getPagesSharing();
+        int fullScans = ksmController.getFullScans();
+        if (armedAtFullScans < 0) armedAtFullScans = fullScans;
+        boolean converged = fullScans - armedAtFullScans >= CONVERGENCE_FULL_SCANS;
 
         // Calculate rates of change since last check
         double volatileRate = Math.abs(currentVolatile - prevPagesVolatile);
@@ -96,7 +115,7 @@ public class KsmAnomalyDetector {
 
         AnomalyReport report = null;
 
-        if (tickCount > WARMUP_TICKS) {
+        if (tickCount > WARMUP_TICKS && converged) {
             // --- Anomaly 1: pages_volatile spike ---
             // A sudden increase in volatile pages means many CoW faults
             // are occurring — characteristic of a timing probe attack.
@@ -108,30 +127,16 @@ public class KsmAnomalyDetector {
                         currentVolatile, currentSharing, volatileRate, sharingRate);
             }
 
-            // --- Anomaly 2: pages_sharing spike ---
-            // Rapid sharing growth means someone is creating many pages with
-            // specific content to trigger merges — memory probing / fingerprinting.
-            if (report == null &&
-                    sharingRate > avgSharingRate * ANOMALY_THRESHOLD && avgSharingRate > 10) {
+            // --- Anomaly 2: mass breaking of merged pages ---
+            // A large share of merged pages un-shared by writes within one tick.
+            double sharingDrop = prevPagesSharing - currentSharing;
+            if (report == null && prevPagesSharing > MIN_SHARING_FOR_RATIO
+                    && sharingDrop > prevPagesSharing * MASS_UNMERGE_FRACTION) {
                 report = AnomalyReport.alert(
-                        String.format("pages_sharing spike (rate=%.0f, avg=%.0f) — " +
-                                "possible memory probing/fingerprinting",
-                                sharingRate, avgSharingRate),
+                        String.format("pages_sharing dropped %.0f%% in one tick (%d -> %d) — " +
+                                "mass CoW breaking of merged pages",
+                                100.0 * sharingDrop / prevPagesSharing, prevPagesSharing, currentSharing),
                         currentVolatile, currentSharing, volatileRate, sharingRate);
-            }
-
-            // --- Anomaly 3: high volatile/sharing ratio ---
-            // Normal: < 10%. Under attack: > 50% (attacker repeatedly writes to
-            // merged pages to measure CoW latency).
-            if (report == null && currentSharing > MIN_SHARING_FOR_RATIO) {
-                double volatileRatio = (double) currentVolatile / currentSharing;
-                if (volatileRatio > VOLATILE_RATIO_ALERT) {
-                    report = AnomalyReport.alert(
-                            String.format("volatile/sharing ratio=%.1f%% — " +
-                                    "abnormal CoW activity detected",
-                                    volatileRatio * 100),
-                            currentVolatile, currentSharing, volatileRate, sharingRate);
-                }
             }
         }
 
@@ -150,6 +155,7 @@ public class KsmAnomalyDetector {
      * Reset the detector state (e.g. after an emergency unmerge).
      */
     public void reset() {
+        armedAtFullScans = -1;   // re-learn: an unmerge restarts convergence
         avgVolatileRate = 0;
         avgSharingRate = 0;
         prevPagesVolatile = 0;

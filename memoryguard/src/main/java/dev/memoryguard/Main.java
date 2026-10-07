@@ -82,6 +82,16 @@ public class Main {
                                 for (int pid : dockerClient.getContainerPids(container.id)) {
                                     String key = pid + ":" + processStartTime(pid);
                                     alive.add(key);
+                                    // Data stores are refused by process name too: the image
+                                    // name is easy to lose (retag → bare sha256 ID) or disguise
+                                    String comm = processComm(pid);
+                                    if (!decision.explicitOptIn() && TrustPolicy.isDataStoreProcess(comm)) {
+                                        if (processed.add(key)) {
+                                            System.out.println("[SECURITY] " + container.name + ": skip PID " + pid
+                                                    + " (" + comm + ") — data store process, remote dedup risk");
+                                        }
+                                        continue;
+                                    }
                                     if (!processed.contains(key)
                                             && dockerClient.injectMadvise(pid, container.id)) {
                                         processed.add(key);
@@ -132,6 +142,14 @@ public class Main {
             Thread.currentThread().join();
         } catch (InterruptedException e) {
             System.out.println("Main thread interrupted.");
+        }
+    }
+
+    static String processComm(int pid) {
+        try {
+            return Files.readString(Paths.get("/proc/" + pid + "/comm")).trim();
+        } catch (Exception e) {
+            return null;
         }
     }
 

@@ -25,6 +25,12 @@ public class KsmTuner implements Runnable {
     private final boolean periodicUnmergeEnabled =
             !"false".equalsIgnoreCase(System.getenv("MEMORYGUARD_PERIODIC_UNMERGE"));
 
+    // "log" (default): record the anomaly only. "respond": unmerge/freeze ksmd.
+    // Host-wide counters gave two false positives in two load tests, each one
+    // stopping deduplication for 10+ minutes — acting on them is opt-in.
+    private final boolean anomalyRespond =
+            "respond".equalsIgnoreCase(System.getenv("MEMORYGUARD_ANOMALY_ACTION"));
+
     // After an anomaly KSM stays throttled (or frozen) for this many ticks
     private static final int ANOMALY_COOLDOWN_TICKS = 40;   // ~10-13 min
     private int cooldownTicks = 0;
@@ -81,7 +87,11 @@ public class KsmTuner implements Runnable {
                     KsmAnomalyDetector.AnomalyReport report = anomalyDetector.check();
                     if (report.suspicious) {
                         System.err.println("[SECURITY-WARN] " + report.reason);
-                        respondToAnomaly(report.reason);
+                        if (anomalyRespond) {
+                            respondToAnomaly(report.reason);
+                        } else {
+                            lastSecurityEvent = "anomaly (logged only): " + report.reason;
+                        }
                     }
                 }
 
