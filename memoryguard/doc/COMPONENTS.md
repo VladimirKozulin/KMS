@@ -86,9 +86,9 @@
 * `isDockerAvailable()`: Проверяет наличие `/var/run/docker.sock`.
 * `getRunningContainers()`: Отправляет `GET /containers/json` в Docker API и возвращает список запущенных контейнеров.
 * `getContainerPids(String containerId)`: Запрашивает `GET /containers/{id}/top` для получения списка PID процессов контейнера.
-* `isContainerTrusted(ContainerInfo container)`: Проверяет соответствие контейнера правилам из `MEMORYGUARD_CONTAINER_WHITELIST` (принцип Deny-by-Default).
+* `checkTrust(ContainerInfo container)`: Делегирует решение `TrustPolicy` — whitelist (точно/glob), label opt-out, домен доверия, запрет хранилищ данных (принцип Deny-by-Default).
 * `isValidContainerId(String containerId)`: Валидирует формат container ID с помощью регулярного выражения `^[a-f0-9]{12,64}$`.
-* `injectMadvise(int pid)`: Запускает внешнюю бинарную утилиту `madvise_injector` для указанного PID.
+* `injectMadvise(int pid, String containerId)` / `unmergeProcess(...)`: Запускает `madvise_injector --container <id>`; инжектор проверяет принадлежность PID контейнеру до и после остановки процесса.
 
 ---
 

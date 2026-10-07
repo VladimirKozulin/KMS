@@ -4,9 +4,12 @@ import dev.memoryguard.ksm.KsmController;
 import dev.memoryguard.ksm.KsmTuner;
 import dev.memoryguard.ksm.KsmAnomalyDetector;
 import dev.memoryguard.containers.DockerClient;
+import dev.memoryguard.containers.TrustPolicy;
 import dev.memoryguard.metrics.MetricsCollector;
 import dev.memoryguard.web.ApiServer;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
@@ -26,8 +29,19 @@ public class Main {
         // ============================================================
         // Sets max_page_sharing=2 (CVE-2024-0564), merge_across_nodes=0,
         // and use_zero_pages=1.
-        ksmController.applySecurityHardening();
-        System.out.println("[OK] KSM security hardening parameters applied.");
+        boolean hardened = ksmController.applySecurityHardening();
+        // Fail closed: without verified hardening we don't mark anything mergeable.
+        // MEMORYGUARD_STRICT=false restores the old "warn and continue" behaviour.
+        boolean strict = !"false".equalsIgnoreCase(System.getenv("MEMORYGUARD_STRICT"));
+        boolean injectionAllowed = hardened || !strict;
+        if (hardened) {
+            System.out.println("[OK] KSM security hardening parameters applied and verified.");
+        } else if (strict) {
+            System.err.println("[SECURITY] Hardening could not be verified — container injection DISABLED "
+                    + "(set MEMORYGUARD_STRICT=false to override).");
+        } else {
+            System.err.println("[SECURITY] Hardening could not be verified — continuing (MEMORYGUARD_STRICT=false).");
+        }
 
         // Create anomaly detector for side-channel attack monitoring
         KsmAnomalyDetector anomalyDetector = new KsmAnomalyDetector(ksmController);
@@ -41,46 +55,42 @@ public class Main {
         System.out.println("[OK] Adaptive KsmTuner daemon thread started (with anti-timing + periodic unmerge).");
 
         DockerClient dockerClient = new DockerClient();
-        if (dockerClient.isDockerAvailable()) {
+        if (dockerClient.isDockerAvailable() && injectionAllowed) {
             System.out.println("[OK] Docker socket connection available.");
-            
-            // Log whitelist configuration
-            String whitelist = System.getenv("MEMORYGUARD_CONTAINER_WHITELIST");
-            if (whitelist == null || whitelist.trim().isEmpty()) {
-                System.out.println("[SECURITY] MEMORYGUARD_CONTAINER_WHITELIST not set — " +
-                        "deny-by-default: no containers will be injected with MADV_MERGEABLE.");
-                System.out.println("[SECURITY] Set MEMORYGUARD_CONTAINER_WHITELIST=nginx,redis,... " +
-                        "to enable injection for trusted containers only.");
-            } else if ("*".equals(whitelist.trim())) {
-                System.out.println("[SECURITY] MEMORYGUARD_CONTAINER_WHITELIST=* — " +
-                        "ALL containers will be injected (reduced security).");
-            } else {
-                System.out.println("[SECURITY] MEMORYGUARD_CONTAINER_WHITELIST=" + whitelist +
-                        " — only matching containers will be injected.");
-            }
-            
+            System.out.println("[SECURITY] Trust policy: " + dockerClient.getTrustPolicy().describe());
+
             // Запуск демона авто-инжектора MADV_MERGEABLE для контейнеров
             Thread injectorThread = new Thread(() -> {
                 System.out.println("[OK] Container Madvise Injector daemon thread started.");
-                // Thread-safe set — prevents data race if accessed from API thread
-                java.util.Set<Integer> processedPids = ConcurrentHashMap.newKeySet();
+                // Key = "pid:starttime" — a recycled PID is a different process
+                java.util.Set<String> processed = ConcurrentHashMap.newKeySet();
+                java.util.Map<String, Boolean> loggedDecisions = new ConcurrentHashMap<>();
                 while (true) {
                     try {
                         if (ksmController.isRunning()) {
                             java.util.List<DockerClient.ContainerInfo> containers = dockerClient.getRunningContainers();
+                            java.util.Set<String> alive = new java.util.HashSet<>();
                             for (DockerClient.ContainerInfo container : containers) {
-                                // [SECURITY] Only inject into explicitly whitelisted containers
-                                if (!dockerClient.isContainerTrusted(container)) {
+                                TrustPolicy.Decision decision = dockerClient.checkTrust(container);
+                                if (loggedDecisions.put(container.id, decision.trusted()) == null) {
+                                    System.out.println("[SECURITY] " + container.name + ": "
+                                            + (decision.trusted() ? "MERGE" : "skip") + " — " + decision.reason());
+                                }
+                                if (!decision.trusted()) {
                                     continue;
                                 }
-                                java.util.List<Integer> pids = dockerClient.getContainerPids(container.id);
-                                for (int pid : pids) {
-                                    if (!processedPids.contains(pid)) {
-                                        dockerClient.injectMadvise(pid);
-                                        processedPids.add(pid);
+                                for (int pid : dockerClient.getContainerPids(container.id)) {
+                                    String key = pid + ":" + processStartTime(pid);
+                                    alive.add(key);
+                                    if (!processed.contains(key)
+                                            && dockerClient.injectMadvise(pid, container.id)) {
+                                        processed.add(key);
                                     }
                                 }
                             }
+                            processed.retainAll(alive);   // forget exited processes
+                            loggedDecisions.keySet().retainAll(
+                                    containers.stream().map(c -> c.id).toList());
                         }
                         Thread.sleep(30000); // Сканирование контейнеров каждые 30 секунд
                     } catch (InterruptedException e) {
@@ -92,6 +102,8 @@ public class Main {
             }, "ContainerMadviseInjectorThread");
             injectorThread.setDaemon(true);
             injectorThread.start();
+        } else if (!injectionAllowed) {
+            System.out.println("[SECURITY] Container injection disabled (hardening not verified).");
         } else {
             System.out.println("[WARNING] Docker socket /var/run/docker.sock not found. Container discovery disabled.");
         }
@@ -120,6 +132,17 @@ public class Main {
             Thread.currentThread().join();
         } catch (InterruptedException e) {
             System.out.println("Main thread interrupted.");
+        }
+    }
+
+    /** Field 22 of /proc/PID/stat (start time in clock ticks), or "?" if unreadable. */
+    static String processStartTime(int pid) {
+        try {
+            String stat = Files.readString(Paths.get("/proc/" + pid + "/stat"));
+            String[] fields = stat.substring(stat.lastIndexOf(')') + 2).split(" ");
+            return fields[19];
+        } catch (Exception e) {
+            return "?";
         }
     }
 }

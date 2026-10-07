@@ -27,52 +27,25 @@ public class DockerClient {
         public String name;
         public String image;
         public long memoryUsageBytes;
+        public java.util.Map<String, String> labels = new java.util.HashMap<>();
+    }
+
+    private final TrustPolicy trustPolicy = TrustPolicy.fromEnv();
+
+    public TrustPolicy getTrustPolicy() {
+        return trustPolicy;
     }
 
     public boolean isDockerAvailable() {
         return Files.exists(Paths.get(SOCKET_PATH));
     }
 
-    // ============================================================
-    // KSM Side-Channel Mitigation: Container Trust Whitelist
-    // ============================================================
-    // Only containers explicitly listed in MEMORYGUARD_CONTAINER_WHITELIST
-    // will have MADV_MERGEABLE injected. This prevents a malicious container
-    // on the same host from being merged with a victim container, closing
-    // the primary KSM side-channel attack vector.
-    //
-    // Usage: MEMORYGUARD_CONTAINER_WHITELIST=nginx,redis,postgres
-    // ============================================================
-
     /**
-     * Checks whether a container is trusted for KSM injection.
-     * Deny-by-default: if MEMORYGUARD_CONTAINER_WHITELIST is not set,
-     * NO containers are injected.
-     *
-     * @param container the container to check
-     * @return true if the container is explicitly whitelisted
+     * Checks whether a container may join the host's KSM merge domain.
+     * See {@link TrustPolicy} for the rules.
      */
-    public boolean isContainerTrusted(ContainerInfo container) {
-        String whitelist = System.getenv("MEMORYGUARD_CONTAINER_WHITELIST");
-        if (whitelist == null || whitelist.trim().isEmpty()) {
-            // Deny-by-default: no whitelist = no injection
-            return false;
-        }
-
-        // Special value "*" means trust all (opt-in to old behavior)
-        if ("*".equals(whitelist.trim())) {
-            return true;
-        }
-
-        String[] allowed = whitelist.split(",");
-        for (String pattern : allowed) {
-            pattern = pattern.trim();
-            if (pattern.isEmpty()) continue;
-            if (container.name.contains(pattern) || container.image.contains(pattern)) {
-                return true;
-            }
-        }
-        return false;
+    public TrustPolicy.Decision checkTrust(ContainerInfo container) {
+        return trustPolicy.decide(container);
     }
 
     /**
@@ -119,6 +92,15 @@ public class DockerClient {
                     info.name = names.get(0).getAsString().replace("/", "");
                 } else {
                     info.name = info.id.substring(0, 12);
+                }
+
+                JsonElement labelsEl = obj.get("Labels");
+                if (labelsEl != null && labelsEl.isJsonObject()) {
+                    for (var entry : labelsEl.getAsJsonObject().entrySet()) {
+                        if (!entry.getValue().isJsonNull()) {
+                            info.labels.put(entry.getKey(), entry.getValue().getAsString());
+                        }
+                    }
                 }
 
                 info.memoryUsageBytes = getContainerMemoryUsage(info.id);
@@ -195,7 +177,25 @@ public class DockerClient {
         return pids;
     }
 
-    public void injectMadvise(int pid) {
+    /**
+     * Marks the process's eligible anonymous memory MADV_MERGEABLE.
+     * The injector re-verifies that the PID still belongs to containerId
+     * after freezing it, so a recycled PID can never be injected.
+     */
+    public boolean injectMadvise(int pid, String containerId) {
+        return runInjector(pid, containerId, false);
+    }
+
+    /** Per-process rollback: MADV_UNMERGEABLE on everything we marked. */
+    public boolean unmergeProcess(int pid, String containerId) {
+        return runInjector(pid, containerId, true);
+    }
+
+    private boolean runInjector(int pid, String containerId, boolean unmerge) {
+        if (!isValidContainerId(containerId)) {
+            System.err.println("[SECURITY] Refusing injection: invalid container ID " + containerId);
+            return false;
+        }
         String injectorPath = "./madvise_injector";
         if (Files.exists(Paths.get("/app/madvise_injector"))) {
             injectorPath = "/app/madvise_injector";
@@ -204,20 +204,25 @@ public class DockerClient {
         }
 
         try {
-            ProcessBuilder pb = new ProcessBuilder(injectorPath, String.valueOf(pid));
+            List<String> cmd = new ArrayList<>(List.of(injectorPath, "--container", containerId));
+            if (unmerge) cmd.add("--unmerge");
+            cmd.add(String.valueOf(pid));
+            ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
             Process p = pb.start();
-            
-            int exitCode = p.waitFor();
+
+            // Drain output before waitFor(), otherwise a full pipe blocks the injector
             String output = new String(p.getInputStream().readAllBytes()).trim();
+            int exitCode = p.waitFor();
             if (exitCode == 0) {
                 System.out.println("[KSM-INJECT] " + output);
-            } else {
-                System.err.println("[KSM-INJECT-FAIL] Exit code: " + exitCode + ". Output: " + output);
+                return true;
             }
+            System.err.println("[KSM-INJECT-FAIL] Exit code: " + exitCode + ". Output: " + output);
         } catch (Exception e) {
             System.err.println("[ERROR] Failed to run madvise_injector for PID " + pid + ": " + e.getMessage());
         }
+        return false;
     }
 
     private String sendGetRequest(String path) {

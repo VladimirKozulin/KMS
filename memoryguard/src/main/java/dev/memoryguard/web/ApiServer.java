@@ -22,7 +22,10 @@ public class ApiServer {
     }
 
     public void start() throws IOException {
-        server = HttpServer.create(new InetSocketAddress(port), 0);
+        // Inside a container keep 0.0.0.0 and publish with -p 127.0.0.1:8787:8787;
+        // on a bare host set MEMORYGUARD_BIND_ADDRESS=127.0.0.1.
+        String bind = System.getenv().getOrDefault("MEMORYGUARD_BIND_ADDRESS", "0.0.0.0");
+        server = HttpServer.create(new InetSocketAddress(bind, port), 0);
         ApiHandlers handlers = new ApiHandlers(collector, ksmController, ksmTuner);
 
         server.createContext("/", handlers::handleStatic);
@@ -32,7 +35,9 @@ public class ApiServer {
 
         server.setExecutor(null); // default executor
         server.start();
-        System.out.println("HTTP Server started on port " + port);
+        System.out.println("HTTP Server started on " + bind + ":" + port
+                + (handlers.isWriteEnabled() ? " (control API: token required)"
+                                             : " (read-only: MEMORYGUARD_API_TOKEN not set)"));
     }
 
     public void stop() {

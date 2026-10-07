@@ -1,6 +1,5 @@
 package dev.memoryguard.web;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
@@ -12,17 +11,72 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 public class ApiHandlers {
     private final MetricsCollector collector;
     private final KsmController ksmController;
     private final KsmTuner ksmTuner;
-    private final Gson gson = new Gson();
+    private final byte[] apiToken;
+
+    // ksmd CPU guard rails: sleep_millisecs=0 + a huge pages_to_scan pins a core
+    static final int MIN_SLEEP_MS = 10, MAX_SLEEP_MS = 10_000;
+    static final int MIN_PAGES_TO_SCAN = 1, MAX_PAGES_TO_SCAN = 30_000;
 
     public ApiHandlers(MetricsCollector collector, KsmController ksmController, KsmTuner ksmTuner) {
         this.collector = collector;
         this.ksmController = ksmController;
         this.ksmTuner = ksmTuner;
+        String token = System.getenv("MEMORYGUARD_API_TOKEN");
+        this.apiToken = (token == null || token.isBlank()) ? null : token.trim().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public boolean isWriteEnabled() {
+        return apiToken != null;
+    }
+
+    /**
+     * Mutating endpoints previously had no authentication at all: anything that
+     * could reach :8787 - including a web page open in an admin's browser
+     * (CSRF via a text/plain POST) - could stop KSM or retune ksmd.
+     * Now: no token configured -> API is read-only; token configured -> every
+     * POST needs "Authorization: Bearer <token>" and a JSON content type.
+     * A custom Authorization header cannot be sent cross-origin without a CORS
+     * preflight, which this server never approves.
+     */
+    private boolean authorizeWrite(HttpExchange exchange) throws IOException {
+        if (apiToken == null) {
+            sendJson(exchange, 403, error("control API disabled: set MEMORYGUARD_API_TOKEN"));
+            return false;
+        }
+        String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
+        if (contentType == null || !contentType.toLowerCase().startsWith("application/json")) {
+            sendJson(exchange, 415, error("Content-Type must be application/json"));
+            return false;
+        }
+        String auth = exchange.getRequestHeaders().getFirst("Authorization");
+        byte[] presented = (auth != null && auth.startsWith("Bearer "))
+                ? auth.substring(7).trim().getBytes(StandardCharsets.UTF_8)
+                : new byte[0];
+        if (!MessageDigest.isEqual(apiToken, presented)) {
+            sendJson(exchange, 401, error("invalid or missing token"));
+            return false;
+        }
+        return true;
+    }
+
+    private static String error(String message) {
+        JsonObject obj = new JsonObject();
+        obj.addProperty("error", message);   // Gson escapes - no JSON injection via exception text
+        return obj.toString();
+    }
+
+    private static int requireRange(JsonObject json, String field, int min, int max) {
+        int value = json.get(field).getAsInt();
+        if (value < min || value > max) {
+            throw new IllegalArgumentException(field + " must be in [" + min + ", " + max + "]");
+        }
+        return value;
     }
 
     public void handleStatic(HttpExchange exchange) throws IOException {
@@ -59,7 +113,7 @@ public class ApiHandlers {
         }
 
         MetricsCollector.MetricsReport report = collector.collect();
-        
+
         // Ручная сборка JSON без рефлексии для совместимости с GraalVM Native
         JsonObject obj = new JsonObject();
         obj.addProperty("ksmSupported", report.ksmSupported);
@@ -78,6 +132,10 @@ public class ApiHandlers {
         obj.addProperty("systemMemoryUsagePercent", report.systemMemoryUsagePercent);
         obj.addProperty("savedMemoryMb", report.savedMemoryMb);
         obj.addProperty("monthlySavingsUsd", report.monthlySavingsUsd);
+        obj.addProperty("maxPageSharing", ksmController.getMaxPageSharing());
+        obj.addProperty("anomalyCooldown", ksmTuner.isInAnomalyCooldown());
+        obj.addProperty("lastSecurityEvent", ksmTuner.getLastSecurityEvent());
+        obj.addProperty("controlApiEnabled", isWriteEnabled());
 
         JsonArray arr = new JsonArray();
         if (report.containers != null) {
@@ -107,16 +165,17 @@ public class ApiHandlers {
             sendResponse(exchange, 405, "Method Not Allowed");
             return;
         }
+        if (!authorizeWrite(exchange)) return;
 
         try {
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             JsonObject json = JsonParser.parseString(body).getAsJsonObject();
             boolean run = json.get("run").getAsBoolean();
-            
+
             ksmController.setRunning(run);
-            sendResponse(exchange, 200, "{\"success\":true}");
+            sendJson(exchange, 200, "{\"success\":true}");
         } catch (Exception e) {
-            sendResponse(exchange, 400, "{\"error\":\"" + e.getMessage() + "\"}");
+            sendJson(exchange, 400, error(String.valueOf(e.getMessage())));
         }
     }
 
@@ -125,28 +184,40 @@ public class ApiHandlers {
             sendResponse(exchange, 405, "Method Not Allowed");
             return;
         }
+        if (!authorizeWrite(exchange)) return;
 
         try {
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             JsonObject json = JsonParser.parseString(body).getAsJsonObject();
 
+            // Validate everything before applying anything
+            Integer pagesToScan = json.has("pagesToScan")
+                    ? requireRange(json, "pagesToScan", MIN_PAGES_TO_SCAN, MAX_PAGES_TO_SCAN) : null;
+            Integer sleepMs = json.has("sleepMillisecs")
+                    ? requireRange(json, "sleepMillisecs", MIN_SLEEP_MS, MAX_SLEEP_MS) : null;
+
             if (json.has("autoTune")) {
                 ksmTuner.setAutoTune(json.get("autoTune").getAsBoolean());
             }
-            if (json.has("pagesToScan")) {
-                ksmController.setPagesToScan(json.get("pagesToScan").getAsInt());
+            if (pagesToScan != null) {
+                ksmController.setPagesToScan(pagesToScan);
             }
-            if (json.has("sleepMillisecs")) {
-                ksmController.setSleepMillisecs(json.get("sleepMillisecs").getAsInt());
+            if (sleepMs != null) {
+                ksmController.setSleepMillisecs(sleepMs);
             }
             if (json.has("useZeroPages")) {
                 ksmController.setUseZeroPages(json.get("useZeroPages").getAsBoolean());
             }
 
-            sendResponse(exchange, 200, "{\"success\":true}");
+            sendJson(exchange, 200, "{\"success\":true}");
         } catch (Exception e) {
-            sendResponse(exchange, 400, "{\"error\":\"" + e.getMessage() + "\"}");
+            sendJson(exchange, 400, error(String.valueOf(e.getMessage())));
         }
+    }
+
+    private void sendJson(HttpExchange exchange, int statusCode, String json) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        sendResponse(exchange, statusCode, json);
     }
 
     private void sendResponse(HttpExchange exchange, int statusCode, String content) throws IOException {

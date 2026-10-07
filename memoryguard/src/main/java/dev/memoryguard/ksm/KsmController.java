@@ -82,8 +82,8 @@ public class KsmController {
     }
 
     public void setMaxPageSharing(int max) throws IOException {
-        if (max < 1 || max > 256) {
-            throw new IllegalArgumentException("max_page_sharing must be 1-256, got: " + max);
+        if (max < 2 || max > 256) {
+            throw new IllegalArgumentException("max_page_sharing must be 2-256, got: " + max);
         }
         writeString("max_page_sharing", String.valueOf(max));
     }
@@ -110,25 +110,46 @@ public class KsmController {
     }
 
     /**
-     * Applies security hardening parameters on startup.
-     * Called from Main.java during initialization.
+     * KSM pages created via use_zero_pages (merged with the kernel zero page).
+     * Not counted in pages_sharing; present on newer kernels only.
      */
-    public void applySecurityHardening() {
-        try {
-            // Limit page sharing to 2 — minimizes CVE-2024-0564 timing signal
-            setMaxPageSharing(2);
-            System.out.println("[SECURITY] max_page_sharing set to 2 (CVE-2024-0564 mitigation)");
-        } catch (IOException e) {
-            System.err.println("[SECURITY] Warning: could not set max_page_sharing: " + e.getMessage());
-        }
+    public long getKsmZeroPages() {
+        return readIntSafe("ksm_zero_pages");
+    }
 
-        try {
-            // Disable cross-NUMA merging — reduces attack surface
-            setMergeAcrossNodes(false);
-            System.out.println("[SECURITY] merge_across_nodes disabled (NUMA isolation)");
-        } catch (IOException e) {
-            System.err.println("[SECURITY] Warning: could not set merge_across_nodes: " + e.getMessage());
-        }
+    /**
+     * Unmerging (run=2) turns every shared mapping back into a private page.
+     * On a host that is overcommitted thanks to KSM — which is the whole point
+     * of the tool — doing that blindly can trigger the OOM killer.
+     *
+     * @return true if MemAvailable stays above 10% of MemTotal after the unmerge
+     */
+    public boolean canAffordUnmerge() {
+        long[] mem = KsmTuner.getSystemMemoryInfo();
+        if (mem == null) return false;
+        long cost = unmergeCostBytes();
+        return mem[1] - cost > mem[0] / 10;
+    }
+
+    public long unmergeCostBytes() {
+        return ((long) getPagesSharing() + getKsmZeroPages()) * 4096L;
+    }
+
+    /**
+     * Applies and VERIFIES security hardening parameters on startup.
+     *
+     * max_page_sharing and merge_across_nodes can only be changed while no
+     * pages are merged — the kernel answers EBUSY otherwise. The previous
+     * implementation logged a warning and carried on, so the CVE-2024-0564
+     * mitigation silently stayed at the kernel default (256). Now we unmerge
+     * first (if memory headroom allows), then read the value back.
+     *
+     * @return true only if every required knob has its hardened value
+     */
+    public boolean applySecurityHardening() {
+        boolean ok = ensureKnob("max_page_sharing", "2", true);
+        // merge_across_nodes exists only on CONFIG_NUMA kernels
+        ok &= ensureKnob("merge_across_nodes", "0", false);
 
         try {
             // Enable zero-page merging — safe (zero pages contain no secrets)
@@ -136,6 +157,48 @@ public class KsmController {
             System.out.println("[SECURITY] use_zero_pages enabled (safe optimization)");
         } catch (IOException e) {
             System.err.println("[SECURITY] Warning: could not set use_zero_pages: " + e.getMessage());
+        }
+        return ok;
+    }
+
+    private boolean ensureKnob(String knob, String value, boolean required) {
+        if (!Files.exists(KSM_DIR.resolve(knob))) {
+            if (required) {
+                System.err.println("[SECURITY] " + knob + " not supported by this kernel — cannot harden");
+            } else {
+                System.out.println("[SECURITY] " + knob + " not present on this kernel — skipped");
+            }
+            return !required;
+        }
+        try {
+            if (readString(knob).equals(value)) {
+                System.out.println("[SECURITY] " + knob + "=" + value + " (already set)");
+                return true;
+            }
+            try {
+                writeString(knob, value);
+            } catch (IOException busy) {
+                // EBUSY: pages are currently merged. Unmerge, change, restore run state.
+                if (!canAffordUnmerge()) {
+                    System.err.println("[SECURITY] Cannot set " + knob + ": pages are merged and unmerging "
+                            + (unmergeCostBytes() >> 20) + " MB would risk OOM");
+                    return false;
+                }
+                String previousRun = readString("run");
+                writeString("run", "2");
+                writeString(knob, value);
+                writeString("run", "2".equals(previousRun) ? "0" : previousRun);
+            }
+            String actual = readString(knob);
+            if (!actual.equals(value)) {
+                System.err.println("[SECURITY] " + knob + " is " + actual + " after write, expected " + value);
+                return false;
+            }
+            System.out.println("[SECURITY] " + knob + "=" + value + " (verified)");
+            return true;
+        } catch (IOException e) {
+            System.err.println("[SECURITY] Could not set " + knob + ": " + e.getMessage());
+            return false;
         }
     }
 

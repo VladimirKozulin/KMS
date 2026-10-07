@@ -98,7 +98,7 @@ async function fetchStatus() {
         const response = await fetch('/api/status');
         if (!response.ok) throw new Error('API request failed');
         const data = await response.json();
-        
+
         updateUI(data);
     } catch (error) {
         console.error('Error fetching system status:', error);
@@ -121,7 +121,7 @@ function updateUI(data) {
 
     // 2. Update KPI cards
     document.getElementById('val-saved-mem').innerText = data.savedMemoryMb.toFixed(2) + ' MB';
-    
+
     const scannedMb = (data.pagesToScan * 4096) / 1024 / 1024; // dummy scaling or total scanned
     // Calculate percentage based on system total memory
     const totalSystemMemoryMb = data.systemTotalMemory / 1024 / 1024;
@@ -151,32 +151,32 @@ function updateUI(data) {
         manualFields.classList.remove('disabled-tuning');
     }
 
-    if (document.activeElement.id !== 'input-pages-to-scan') {
+    if (!document.activeElement || document.activeElement.id !== 'input-pages-to-scan') {
         document.getElementById('input-pages-to-scan').value = data.pagesToScan;
     }
-    if (document.activeElement.id !== 'input-sleep-ms') {
+    if (!document.activeElement || document.activeElement.id !== 'input-sleep-ms') {
         document.getElementById('input-sleep-ms').value = data.sleepMillisecs;
     }
-    if (document.activeElement.id !== 'input-zero-pages') {
+    if (!document.activeElement || document.activeElement.id !== 'input-zero-pages') {
         document.getElementById('input-zero-pages').checked = data.useZeroPages;
     }
 
     // 4. Update Chart
     const now = new Date();
-    const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                    now.getMinutes().toString().padStart(2, '0') + ':' + 
+    const timeStr = now.getHours().toString().padStart(2, '0') + ':' +
+                    now.getMinutes().toString().padStart(2, '0') + ':' +
                     now.getSeconds().toString().padStart(2, '0');
     updateChart(timeStr, data.savedMemoryMb, data.systemMemoryUsagePercent);
 
     // 5. Update Container Table
     const tableBody = document.getElementById('containers-table-body');
     tableBody.innerHTML = '';
-    
+
     if (data.containers && data.containers.length > 0) {
         data.containers.forEach(c => {
             const row = document.createElement('tr');
             const ramMb = c.memoryUsageBytes / 1024 / 1024;
-            
+
             row.innerHTML = `
                 <td><strong>${c.name}</strong></td>
                 <td><code>${c.image}</code></td>
@@ -196,30 +196,57 @@ function updateUI(data) {
     }
 }
 
+// Control API calls need the token from MEMORYGUARD_API_TOKEN.
+// It is kept only in this browser's localStorage and asked for on first use.
+function getApiToken() {
+    try { return localStorage.getItem('mgApiToken') || ''; } catch (e) { return ''; }
+}
+
+async function controlRequest(url, payload) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getApiToken()
+            },
+            body: JSON.stringify(payload)
+        });
+        if (response.status === 401 && attempt === 0) {
+            const token = prompt('MemoryGuard API token (MEMORYGUARD_API_TOKEN):');
+            if (!token) break;
+            try { localStorage.setItem('mgApiToken', token); } catch (e) { /* private mode */ }
+            continue;
+        }
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.error || ('HTTP ' + response.status));
+        }
+        return response;
+    }
+    throw new Error('Not authorized');
+}
+
 // Set up UI listeners
 document.getElementById('btn-toggle-ksm').addEventListener('change', async (e) => {
     try {
-        await fetch('/api/ksm/toggle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ run: e.target.checked })
-        });
+        await controlRequest('/api/ksm/toggle', { run: e.target.checked });
         fetchStatus();
     } catch (err) {
         console.error('Failed to toggle KSM:', err);
+        alert('Failed to toggle KSM: ' + err.message);
+        fetchStatus();
     }
 });
 
 document.getElementById('btn-toggle-autotune').addEventListener('change', async (e) => {
     try {
-        await fetch('/api/ksm/tune', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ autoTune: e.target.checked })
-        });
+        await controlRequest('/api/ksm/tune', { autoTune: e.target.checked });
         fetchStatus();
     } catch (err) {
         console.error('Failed to toggle Autotune:', err);
+        alert('Failed to toggle Autotune: ' + err.message);
+        fetchStatus();
     }
 });
 
@@ -229,19 +256,16 @@ document.getElementById('btn-apply-tune').addEventListener('click', async () => 
     const useZeroPages = document.getElementById('input-zero-pages').checked;
 
     try {
-        await fetch('/api/ksm/tune', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pagesToScan: pagesToScan,
-                sleepMillisecs: sleepMillisecs,
-                useZeroPages: useZeroPages
-            })
+        await controlRequest('/api/ksm/tune', {
+            pagesToScan: pagesToScan,
+            sleepMillisecs: sleepMillisecs,
+            useZeroPages: useZeroPages
         });
         alert('Tuning parameters updated successfully!');
         fetchStatus();
     } catch (err) {
         console.error('Failed to update tuning:', err);
+        alert('Failed to update tuning: ' + err.message);
     }
 });
 

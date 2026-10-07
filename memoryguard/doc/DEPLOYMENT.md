@@ -75,7 +75,7 @@ docker run -d \
   -v /sys:/sys \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -p 8787:8787 \
-  -e MEMORYGUARD_CONTAINER_WHITELIST=nginx,redis,postgres \
+  -e MEMORYGUARD_CONTAINER_WHITELIST=nginx,api-* \
   memoryguard:latest
 ```
 
@@ -100,7 +100,17 @@ docker run -d \
 
 | Переменная | Значение по умолчанию | Описание |
 |---|---|---|
-| `MEMORYGUARD_CONTAINER_WHITELIST` | *(не задано)* | Список контейнеров для инжекции через запятую. Пустое/отсутствует = deny-all. `*` = все. |
+| `MEMORYGUARD_CONTAINER_WHITELIST` | *(не задано)* | Список контейнеров для инжекции через запятую: точные имена/образы или glob с `*` (`demo-adservice*`). Пустое/отсутствует = deny-all. `*` = все. |
+| `MEMORYGUARD_TRUST_DOMAIN` | `default` | Домен доверия хоста; контейнеры с другим label `memoryguard.domain` не мержатся |
+| `MEMORYGUARD_TRUST_LABELS` | `false` | Разрешить label `memoryguard.ksm=true` включать слияние (только если labels ставит платформа) |
+| `MEMORYGUARD_DENY_IMAGES` | redis, memcached, valkey, mysql, postgres, … | Образы, запрещённые без явного opt-in (защита от удалённых dedup-атак) |
+| `MEMORYGUARD_EXCLUDE_LIBS` | *(не задано)* | Доп. библиотеки, чей `.bss` не мержить |
+| `MEMORYGUARD_STRICT` | `true` | Отключить инжекцию, если hardening ядра не подтверждён |
+| `MEMORYGUARD_PERIODIC_UNMERGE` | `true` | Периодический unmerge (с проверкой запаса памяти) |
+| `MEMORYGUARD_API_TOKEN` | *(не задано)* | Токен для `POST /api/ksm/*`; без него API только для чтения |
+| `MEMORYGUARD_BIND_ADDRESS` | `0.0.0.0` | Адрес HTTP-сервера |
+
+> **Breaking change:** whitelist больше не совпадает по подстроке. Для compose-реплик (`demo-adservice-1..10`) используйте `demo-adservice*`. Подробно: [KSM_THREATS.md](KSM_THREATS.md).
 
 ---
 
@@ -138,7 +148,7 @@ services:
     ports:
       - "8787:8787"
     environment:
-      - MEMORYGUARD_CONTAINER_WHITELIST=nginx,redis,postgres
+      - MEMORYGUARD_CONTAINER_WHITELIST=nginx,api-*
     restart: unless-stopped
     read_only: true
     security_opt:
@@ -166,13 +176,13 @@ docker logs -f memoryguard  # Follow mode
 [SECURITY] max_page_sharing set to 2 (CVE-2024-0564 mitigation)
 [SECURITY] merge_across_nodes disabled (NUMA isolation)
 [SECURITY] use_zero_pages enabled (safe optimization)
-[OK] KSM security hardening parameters applied.
+[OK] KSM security hardening parameters applied and verified.
 [OK] KSM anomaly detector initialized.
 [OK] Adaptive KsmTuner daemon thread started (with anti-timing + periodic unmerge).
 [OK] Docker socket connection available.
-[SECURITY] MEMORYGUARD_CONTAINER_WHITELIST=nginx,redis,postgres — only matching containers will be injected.
+[SECURITY] Trust policy: domain=default, whitelist=[nginx, api-*], trustLabels=false, denyImages=[redis, ...]
 [OK] Container Madvise Injector daemon thread started.
-HTTP Server started on port 8787
+HTTP Server started on 0.0.0.0:8787 (control API: token required)
 [OK] MemoryGuard Dashboard API Server is running on http://localhost:8787
 === MemoryGuard Agent fully started with KSM side-channel protection ===
 ```
