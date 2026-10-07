@@ -183,7 +183,7 @@ if (latency > 1000) {
 
 2. **Периодический unmerge:** каждые 20–60 тиков (~5–15 минут, рандомизировано) записывается `run=2` в sysfs, что заставляет ядро **разъединить ВСЕ** merged-страницы. После паузы 0.5–1 сек KSM перезапускается. Это разрушает любой timing-канал, который атакующий мог построить.
 
-3. **Emergency unmerge:** при обнаружении аномалии `KsmAnomalyDetector` — немедленный unmerge + замедление KSM (sleep=200ms, scan=50) на ~10–13 минут. Если памяти на unmerge не хватает — ksmd замораживается (`run=0`): новые слияния (а значит, и пробы атакующего) прекращаются, достигнутая экономия сохраняется.
+3. **Emergency unmerge** (только при `MEMORYGUARD_ANOMALY_ACTION=respond`): при обнаружении аномалии `KsmAnomalyDetector` — немедленный unmerge + замедление KSM (sleep=200ms, scan=50) на ~10–13 минут. Если памяти на unmerge не хватает — ksmd замораживается (`run=0`): новые слияния (а значит, и пробы атакующего) прекращаются, достигнутая экономия сохраняется.
 
 **Защита от OOM:** любой `run=2` выполняется, только если после него `MemAvailable` останется > 10% `MemTotal`. На хосте, переподписанном благодаря KSM, глобальный unmerge иначе вызовет OOM-killer.
 
@@ -236,13 +236,17 @@ EMA(t) = α × Value(t) + (1 - α) × EMA(t-1)
 | Правило | Условие | Интерпретация |
 |---|---|---|
 | Volatile spike | `rate(pages_volatile) > 25 × EMA` | Массовые CoW page faults → timing probe |
-| Sharing spike | `rate(pages_sharing) > 25 × EMA, avg > 10` | Массовое создание merge-кандидатов → probing |
-| Volatile ratio | `pages_volatile / pages_sharing > 50%` | Аномальная запись в merged-страницы |
+| Mass unmerge | `pages_sharing` упал > 25% за один тик | Массовая запись в merged-страницы (CoW-пробы) |
 
-**Реакция на аномалию:**
-1. Логирование `[SECURITY]` алерта (также поле `lastSecurityEvent` в `/api/status`)
-2. Emergency unmerge (`run=2`), если хватает памяти, иначе заморозка ksmd (`run=0`)
-3. Замедление KSM: `sleep_millisecs = 200`, `pages_to_scan = 50` на время cooldown (~10–13 мин)
+Правила включаются только после **сходимости KSM** — 3 полных прохода ksmd с момента старта или последнего unmerge.
+
+**Удалены по итогам нагрузочного эксперимента 3** (см. `Исследования/Эксперимент_3_нагрузка/Отчёт.md`):
+* *Sharing spike* (`rate(pages_sharing) > 25 × EMA`): рост слияний — это нормальная работа KSM после старта, unmerge или деплоя реплик. Правило сработало на собственной сходимости и заморозило ksmd.
+* *Volatile ratio* (`pages_volatile / pages_sharing > 50%`): при `use_zero_pages=1` экономия считается в `ksm_zero_pages`, а `pages_volatile` на любом heap с GC исчисляется миллионами — на здоровом хосте отношение достигло 61997%.
+
+**Реакция на аномалию** (`MEMORYGUARD_ANOMALY_ACTION`):
+* `log` (по умолчанию) — только `[SECURITY-WARN]` в логе и поле `lastSecurityEvent` в `/api/status`.
+* `respond` — emergency unmerge (`run=2`), если хватает памяти, иначе заморозка ksmd (`run=0`); замедление KSM (`sleep_millisecs = 200`, `pages_to_scan = 50`) на время cooldown (~10–13 мин).
 
 Детектор смотрит на глобальные счётчики и не атрибутирует атаку конкретному контейнеру. Для атрибуции на новых ядрах доступны `/proc/PID/ksm_stat` и (патч 2025) per-memcg KSM-статистика.
 

@@ -122,7 +122,9 @@ mlock / DONTDUMP / WIPEONFORK → `secret-vmflag`, 8 стеков потоков
 ### 3.5. Реакция на атаку и periodic unmerge
 
 * Periodic unmerge теперь действительно выполняется каждые 20–60 тиков (~5–15 мин).
-* Аномалия → если памяти хватает: `run=2` + KSM в «медленном» режиме (`sleep=200ms`, `scan=50`);
+* Аномалия → по умолчанию только алерт (`MEMORYGUARD_ANOMALY_ACTION=log`): в нагрузочном эксперименте 3
+  детектор на глобальных счётчиках дважды сработал ложно и каждый раз останавливал экономию на 10+ минут.
+  С `MEMORYGUARD_ANOMALY_ACTION=respond`: если памяти хватает — `run=2` + KSM в «медленном» режиме (`sleep=200ms`, `scan=50`);
   если не хватает: `run=0` — **заморозка** ksmd. Новые слияния не происходят, значит
   пробные страницы атакующего больше не сливаются с чужими, а уже полученная экономия сохраняется.
   Состояние держится ~10–13 мин, затем KSM возобновляется.
@@ -215,6 +217,12 @@ docker run -d --name memoryguard \
 | `MEMORYGUARD_PERIODIC_UNMERGE` | `true` | Периодический `run=2` (с проверкой памяти) |
 | `MEMORYGUARD_API_TOKEN` | — (read-only) | Токен для POST `/api/ksm/*` |
 | `MEMORYGUARD_BIND_ADDRESS` | `0.0.0.0` | Адрес HTTP-сервера |
+| `MEMORYGUARD_EXCLUDE_CONTAINERS` (`MEMORYGUARD_BLACKLIST`) | — | Исключения: имена/образы точно или glob; сильнее whitelist |
+| `MEMORYGUARD_MAX_PAGE_SHARING` | `2` | 2–256. 2 = сильнейшая защита от CVE-2024-0564, но потолок 50% на одинаковых ненулевых страницах |
+| `MEMORYGUARD_ANOMALY_ACTION` | `log` | `log` — только алерт; `respond` — unmerge/заморозка ksmd при аномалии |
+| `MEMORYGUARD_TUNER` | `adaptive` | `adaptive` — скорость ksmd по обратной связи (экономия на просканированную страницу); `threshold` — три фиксированных режима по свободной памяти |
+| `MEMORYGUARD_KSM_AUTOSTART` | `false` | Включить KSM (`run=1`) после подтверждённого hardening; иначе — через дашборд/API |
+| `MEMORYGUARD_REINJECT_MINUTES` | `10` | Повторная инжекция уже обработанных процессов (новые регионы после роста heap); `0` — выключить |
 
 ---
 

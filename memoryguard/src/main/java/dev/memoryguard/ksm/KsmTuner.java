@@ -37,6 +37,15 @@ public class KsmTuner implements Runnable {
     private boolean frozenByAnomaly = false;
     private volatile String lastSecurityEvent = null;
 
+    // "adaptive" (default): feedback on pages saved per page scanned, see
+    // AdaptiveScanPolicy. "threshold": the original three fixed speeds chosen
+    // by free memory only (kept for comparison).
+    private final boolean adaptive =
+            !"threshold".equalsIgnoreCase(System.getenv("MEMORYGUARD_TUNER"));
+    private final AdaptiveScanPolicy policy = new AdaptiveScanPolicy();
+    private volatile AdaptiveScanPolicy.Decision lastDecision;
+    private String lastLoggedKind = "";
+
     // Jitter bounds for the tuner sleep interval (milliseconds)
     private static final int TUNE_INTERVAL_MIN_MS = 12000;
     private static final int TUNE_INTERVAL_JITTER_MS = 8000;
@@ -70,9 +79,24 @@ public class KsmTuner implements Runnable {
         return cooldownTicks > 0;
     }
 
+    public String getTunerName() {
+        return adaptive ? "adaptive" : "threshold";
+    }
+
+    public AdaptiveScanPolicy.Decision getLastDecision() {
+        return lastDecision;
+    }
+
+    /** Called by the injector loop: new regions were marked mergeable. */
+    public void notifyNewMergeableMemory(long bytes) {
+        policy.notifyNewMemory(bytes);
+    }
+
     @Override
     public void run() {
         resetUnmergeCountdown();
+        ksmController.enableSmartScan();
+        System.out.println("[TUNER] " + getTunerName() + " tuner active");
         while (running) {
             if (cooldownTicks > 0) {
                 // Keep the post-anomaly throttle; don't let tune() undo it
@@ -134,6 +158,7 @@ public class KsmTuner implements Runnable {
             Thread.sleep(500 + secureRandom.nextInt(500));
             ksmController.setRunning(true);
             if (anomalyDetector != null) anomalyDetector.reset();   // counters jumped, rebuild baseline
+            policy.notifyUnmerge();
             System.out.println("[SECURITY] Periodic unmerge completed — timing channels disrupted");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -192,6 +217,52 @@ public class KsmTuner implements Runnable {
     }
 
     private void tune() {
+        if (adaptive) {
+            tuneAdaptive();
+        } else {
+            tuneThreshold();
+        }
+    }
+
+    private void tuneAdaptive() {
+        try {
+            long[] memInfo = getSystemMemoryInfo();
+            if (memInfo == null) return;
+            AdaptiveScanPolicy.Decision d = policy.decide(new AdaptiveScanPolicy.Sample(
+                    (double) memInfo[1] / memInfo[0],
+                    ksmController.getSavedPages(),
+                    ksmController.getPagesScanned(),
+                    ksmController.getFullScans()));
+            lastDecision = d;
+
+            int[] knobs = AdaptiveScanPolicy.toKnobs(d.ratePagesPerSec());
+            applyWithJitter(knobs[0], knobs[1]);
+
+            // Log transitions only: mode change or speed-up/back-off/hold flip
+            String r = d.reason();
+            String kind = d.mode() + ":" + (r.contains("speed up") ? "up" : r.contains("back off") ? "down"
+                    : r.contains("glide") ? "glide" : r.contains("hold") ? "hold" : r.replaceAll("[^a-z ].*", ""));
+            if (!kind.equals(lastLoggedKind)) {
+                lastLoggedKind = kind;
+                System.out.printf(java.util.Locale.ROOT, "[TUNER] %s rate=%.0f pages/s (%d pages / %d ms) — %s%n",
+                        d.mode(), d.ratePagesPerSec(), knobs[0], knobs[1], d.reason());
+            }
+        } catch (Exception e) {
+            System.err.println("[TUNER] adaptive tuning failed: " + e.getMessage());
+        }
+    }
+
+    // === Anti-timing: ±30% jitter on both knobs ===
+    private void applyWithJitter(int baseScan, int baseSleep) throws IOException {
+        int scanJitter = Math.max(1, (int) (baseScan * 0.3));
+        int sleepJitter = Math.max(1, (int) (baseSleep * 0.3));
+        int actualScan = baseScan - scanJitter + secureRandom.nextInt(scanJitter * 2 + 1);
+        int actualSleep = baseSleep - sleepJitter + secureRandom.nextInt(sleepJitter * 2 + 1);
+        ksmController.setPagesToScan(Math.max(16, actualScan));
+        ksmController.setSleepMillisecs(Math.max(5, actualSleep));
+    }
+
+    private void tuneThreshold() {
         try {
             long[] memInfo = getSystemMemoryInfo();
             if (memInfo == null) return;
@@ -220,15 +291,7 @@ public class KsmTuner implements Runnable {
                 baseSleep = 50;
             }
 
-            // === Anti-timing: add ±30% jitter to KSM parameters ===
-            int scanJitter = Math.max(1, (int) (baseScan * 0.3));
-            int sleepJitter = Math.max(1, (int) (baseSleep * 0.3));
-
-            int actualScan = baseScan - scanJitter + secureRandom.nextInt(scanJitter * 2 + 1);
-            int actualSleep = baseSleep - sleepJitter + secureRandom.nextInt(sleepJitter * 2 + 1);
-
-            ksmController.setPagesToScan(Math.max(50, actualScan));
-            ksmController.setSleepMillisecs(Math.max(5, actualSleep));
+            applyWithJitter(baseScan, baseSleep);
         } catch (Exception e) {
             // Ignore tuning errors in background
         }

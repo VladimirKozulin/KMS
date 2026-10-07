@@ -220,19 +220,23 @@ public class DockerClient {
      * The injector re-verifies that the PID still belongs to containerId
      * after freezing it, so a recycled PID can never be injected.
      */
-    public boolean injectMadvise(int pid, String containerId) {
+    public long injectMadvise(int pid, String containerId) {
         return runInjector(pid, containerId, false);
     }
 
     /** Per-process rollback: MADV_UNMERGEABLE on everything we marked. */
     public boolean unmergeProcess(int pid, String containerId) {
-        return runInjector(pid, containerId, true);
+        return runInjector(pid, containerId, true) >= 0;
     }
 
-    private boolean runInjector(int pid, String containerId, boolean unmerge) {
+    private static final java.util.regex.Pattern MARKED_KB =
+            java.util.regex.Pattern.compile("marked=(\\d+) KB");
+
+    /** @return KB marked (or unmarked) by the injector, -1 on failure */
+    private long runInjector(int pid, String containerId, boolean unmerge) {
         if (!isValidContainerId(containerId)) {
             System.err.println("[SECURITY] Refusing injection: invalid container ID " + containerId);
-            return false;
+            return -1;
         }
         String injectorPath = "./madvise_injector";
         if (Files.exists(Paths.get("/app/madvise_injector"))) {
@@ -253,14 +257,18 @@ public class DockerClient {
             String output = new String(p.getInputStream().readAllBytes()).trim();
             int exitCode = p.waitFor();
             if (exitCode == 0) {
-                System.out.println("[KSM-INJECT] " + output);
-                return true;
+                java.util.regex.Matcher m = MARKED_KB.matcher(output);
+                long kb = m.find() ? Long.parseLong(m.group(1)) : 0;
+                if (kb > 0) {   // re-injections that find nothing new stay quiet
+                    System.out.println("[KSM-INJECT] " + output);
+                }
+                return kb;
             }
             System.err.println("[KSM-INJECT-FAIL] Exit code: " + exitCode + ". Output: " + output);
         } catch (Exception e) {
             System.err.println("[ERROR] Failed to run madvise_injector for PID " + pid + ": " + e.getMessage());
         }
-        return false;
+        return -1;
     }
 
     private String sendGetRequest(String path) {

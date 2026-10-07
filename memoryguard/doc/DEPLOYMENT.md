@@ -109,6 +109,12 @@ docker run -d \
 | `MEMORYGUARD_PERIODIC_UNMERGE` | `true` | Периодический unmerge (с проверкой запаса памяти) |
 | `MEMORYGUARD_API_TOKEN` | *(не задано)* | Токен для `POST /api/ksm/*`; без него API только для чтения |
 | `MEMORYGUARD_BIND_ADDRESS` | `0.0.0.0` | Адрес HTTP-сервера |
+| `MEMORYGUARD_EXCLUDE_CONTAINERS` (`MEMORYGUARD_BLACKLIST`) | — | Исключения: имена/образы точно или glob; сильнее whitelist |
+| `MEMORYGUARD_MAX_PAGE_SHARING` | `2` | 2–256. 2 = сильнейшая защита от CVE-2024-0564, но потолок 50% на одинаковых ненулевых страницах |
+| `MEMORYGUARD_ANOMALY_ACTION` | `log` | `log` — только алерт; `respond` — unmerge/заморозка ksmd при аномалии |
+| `MEMORYGUARD_TUNER` | `adaptive` | `adaptive` — скорость ksmd по обратной связи (экономия на просканированную страницу); `threshold` — три фиксированных режима по свободной памяти |
+| `MEMORYGUARD_KSM_AUTOSTART` | `false` | Включить KSM (`run=1`) после подтверждённого hardening; иначе — через дашборд/API |
+| `MEMORYGUARD_REINJECT_MINUTES` | `10` | Повторная инжекция уже обработанных процессов (новые регионы после роста heap); `0` — выключить |
 
 > **Breaking change:** whitelist больше не совпадает по подстроке. Для compose-реплик (`demo-adservice-1..10`) используйте `demo-adservice*`. Подробно: [KSM_THREATS.md](KSM_THREATS.md).
 
@@ -178,7 +184,7 @@ docker logs -f memoryguard  # Follow mode
 [SECURITY] use_zero_pages enabled (safe optimization)
 [OK] KSM security hardening parameters applied and verified.
 [OK] KSM anomaly detector initialized.
-[OK] Adaptive KsmTuner daemon thread started (with anti-timing + periodic unmerge).
+[OK] KsmTuner daemon thread started (adaptive, anti-timing jitter, periodic unmerge).
 [OK] Docker socket connection available.
 [SECURITY] Trust policy: domain=default, whitelist=[nginx, api-*], trustLabels=false, denyImages=[redis, ...]
 [OK] Container Madvise Injector daemon thread started.

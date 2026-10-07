@@ -19,6 +19,8 @@ services:
       # - MEMORYGUARD_EXCLUDE_CONTAINERS=vault,postgres,payment-*
       - MEMORYGUARD_EXCLUDE_CONTAINERS=${MEMORYGUARD_EXCLUDE_CONTAINERS:-}
       - MEMORYGUARD_TRUST_DOMAIN=${MEMORYGUARD_TRUST_DOMAIN:-default}
+      # Включить KSM сразу после проверенного hardening (иначе — вручную через дашборд)
+      - MEMORYGUARD_KSM_AUTOSTART=${MEMORYGUARD_KSM_AUTOSTART:-true}
       # Без токена API только для чтения. Сгенерировать: openssl rand -hex 32
       - MEMORYGUARD_API_TOKEN=${MEMORYGUARD_API_TOKEN:-}
     volumes:

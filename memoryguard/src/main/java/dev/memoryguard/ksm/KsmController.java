@@ -114,7 +114,33 @@ public class KsmController {
      * Not counted in pages_sharing; present on newer kernels only.
      */
     public long getKsmZeroPages() {
-        return readIntSafe("ksm_zero_pages");
+        return readLongSafe("ksm_zero_pages");
+    }
+
+    /**
+     * Cumulative number of pages ksmd has scanned (kernel 6.7+, -1 if absent).
+     * This is the direct cost of KSM: ksmd CPU time is proportional to it.
+     */
+    public long getPagesScanned() {
+        return Files.exists(KSM_DIR.resolve("pages_scanned")) ? readLongSafe("pages_scanned") : -1;
+    }
+
+    /** Pages KSM currently saves: merged duplicates + pages merged with the zero page. */
+    public long getSavedPages() {
+        return getPagesSharing() + getKsmZeroPages();
+    }
+
+    /**
+     * smart_scan (kernel 6.7+) skips pages that repeatedly failed to merge —
+     * on GC'd heaps most pages are like that, so it cuts ksmd CPU for free.
+     */
+    public void enableSmartScan() {
+        if (!Files.exists(KSM_DIR.resolve("smart_scan"))) return;
+        try {
+            writeString("smart_scan", "1");
+        } catch (IOException e) {
+            System.err.println("[TUNER] Could not enable smart_scan: " + e.getMessage());
+        }
     }
 
     /**
@@ -233,6 +259,14 @@ public class KsmController {
     private int readIntSafe(String filename) {
         try {
             return Integer.parseInt(readString(filename));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private long readLongSafe(String filename) {
+        try {
+            return Long.parseLong(readString(filename));
         } catch (Exception e) {
             return 0;
         }

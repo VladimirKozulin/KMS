@@ -136,6 +136,15 @@ public class ApiHandlers {
         obj.addProperty("anomalyCooldown", ksmTuner.isInAnomalyCooldown());
         obj.addProperty("lastSecurityEvent", ksmTuner.getLastSecurityEvent());
         obj.addProperty("controlApiEnabled", isWriteEnabled());
+        obj.addProperty("tuner", ksmTuner.getTunerName());
+        obj.addProperty("pagesScanned", ksmController.getPagesScanned());
+        obj.addProperty("ksmZeroPages", ksmController.getKsmZeroPages());
+        var decision = ksmTuner.getLastDecision();
+        if (decision != null) {
+            obj.addProperty("tunerMode", decision.mode().name());
+            obj.addProperty("tunerRatePagesPerSec", Math.round(decision.ratePagesPerSec()));
+            obj.addProperty("tunerReason", decision.reason());
+        }
 
         JsonArray arr = new JsonArray();
         if (report.containers != null) {

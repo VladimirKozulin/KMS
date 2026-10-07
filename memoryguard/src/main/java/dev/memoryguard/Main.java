@@ -43,6 +43,21 @@ public class Main {
             System.err.println("[SECURITY] Hardening could not be verified — continuing (MEMORYGUARD_STRICT=false).");
         }
 
+        // Without this the agent waits until an operator flips KSM on via the
+        // dashboard/API — fine for manual use, a trap for automated deployment.
+        if ("true".equalsIgnoreCase(System.getenv("MEMORYGUARD_KSM_AUTOSTART"))) {
+            if (!injectionAllowed) {
+                System.err.println("[SECURITY] MEMORYGUARD_KSM_AUTOSTART ignored: hardening not verified.");
+            } else if (!ksmController.isRunning()) {
+                try {
+                    ksmController.setRunning(true);
+                    System.out.println("[OK] KSM started (MEMORYGUARD_KSM_AUTOSTART=true).");
+                } catch (IOException e) {
+                    System.err.println("[ERROR] Could not start KSM: " + e.getMessage());
+                }
+            }
+        }
+
         // Create anomaly detector for side-channel attack monitoring
         KsmAnomalyDetector anomalyDetector = new KsmAnomalyDetector(ksmController);
         System.out.println("[OK] KSM anomaly detector initialized.");
@@ -52,7 +67,22 @@ public class Main {
         Thread tunerThread = new Thread(tuner, "KsmTunerThread");
         tunerThread.setDaemon(true);
         tunerThread.start();
-        System.out.println("[OK] Adaptive KsmTuner daemon thread started (with anti-timing + periodic unmerge).");
+        System.out.println("[OK] KsmTuner daemon thread started (" + tuner.getTunerName()
+                + ", anti-timing jitter, periodic unmerge).");
+
+        // Injection is per process; regions created later (a JVM heap growing from
+        // -Xms to -Xmx, new malloc arenas) are not mergeable until injected again.
+        // Re-runs are cheap: the injector skips regions already marked "mg".
+        long reinjectMs = 10 * 60_000L;
+        String reinjectEnv = System.getenv("MEMORYGUARD_REINJECT_MINUTES");
+        if (reinjectEnv != null && !reinjectEnv.isBlank()) {
+            try {
+                reinjectMs = Math.max(0, Long.parseLong(reinjectEnv.trim())) * 60_000L;
+            } catch (NumberFormatException e) {
+                System.err.println("[CONFIG] Invalid MEMORYGUARD_REINJECT_MINUTES: " + reinjectEnv);
+            }
+        }
+        final long reinjectIntervalMs = reinjectMs;
 
         DockerClient dockerClient = new DockerClient();
         if (dockerClient.isDockerAvailable() && injectionAllowed) {
@@ -62,14 +92,17 @@ public class Main {
             // Запуск демона авто-инжектора MADV_MERGEABLE для контейнеров
             Thread injectorThread = new Thread(() -> {
                 System.out.println("[OK] Container Madvise Injector daemon thread started.");
-                // Key = "pid:starttime" — a recycled PID is a different process
-                java.util.Set<String> processed = ConcurrentHashMap.newKeySet();
+                // Key = "pid:starttime" — a recycled PID is a different process.
+                // Value = time of the last injection (Long.MAX_VALUE = never inject).
+                java.util.Map<String, Long> processed = new ConcurrentHashMap<>();
                 java.util.Map<String, Boolean> loggedDecisions = new ConcurrentHashMap<>();
                 while (true) {
                     try {
                         if (ksmController.isRunning()) {
                             java.util.List<DockerClient.ContainerInfo> containers = dockerClient.getRunningContainers();
                             java.util.Set<String> alive = new java.util.HashSet<>();
+                            long newProcessBytes = 0;   // first injection of a process = new deployment
+                            long now = System.currentTimeMillis();
                             for (DockerClient.ContainerInfo container : containers) {
                                 TrustPolicy.Decision decision = dockerClient.checkTrust(container);
                                 if (loggedDecisions.put(container.id, decision.trusted()) == null) {
@@ -86,19 +119,30 @@ public class Main {
                                     // name is easy to lose (retag → bare sha256 ID) or disguise
                                     String comm = processComm(pid);
                                     if (!decision.explicitOptIn() && TrustPolicy.isDataStoreProcess(comm)) {
-                                        if (processed.add(key)) {
+                                        if (processed.putIfAbsent(key, Long.MAX_VALUE) == null) {
                                             System.out.println("[SECURITY] " + container.name + ": skip PID " + pid
                                                     + " (" + comm + ") — data store process, remote dedup risk");
                                         }
                                         continue;
                                     }
-                                    if (!processed.contains(key)
-                                            && dockerClient.injectMadvise(pid, container.id)) {
-                                        processed.add(key);
+                                    Long last = processed.get(key);
+                                    boolean due = last == null
+                                            || (reinjectIntervalMs > 0 && last != Long.MAX_VALUE
+                                                && now - last >= reinjectIntervalMs);
+                                    if (due) {
+                                        long markedKb = dockerClient.injectMadvise(pid, container.id);
+                                        if (markedKb >= 0) {
+                                            processed.put(key, now);
+                                            if (last == null) newProcessBytes += markedKb * 1024;
+                                        }
                                     }
                                 }
                             }
-                            processed.retainAll(alive);   // forget exited processes
+                            processed.keySet().retainAll(alive);   // forget exited processes
+                            // New processes → the tuner scans fast until it has converged.
+                            // Re-injections are not reported: under load they are allocation churn
+                            // (new arenas, grown heaps) and the tuner judges them by efficiency.
+                            tuner.notifyNewMergeableMemory(newProcessBytes);
                             loggedDecisions.keySet().retainAll(
                                     containers.stream().map(c -> c.id).toList());
                         }
