@@ -147,7 +147,26 @@ public class KsmController {
      * @return true only if every required knob has its hardened value
      */
     public boolean applySecurityHardening() {
-        boolean ok = ensureKnob("max_page_sharing", "2", true);
+        // 2 = strongest CVE-2024-0564 mitigation, but caps dedup of identical
+        // non-zero pages at 50%. MEMORYGUARD_MAX_PAGE_SHARING trades that off.
+        int maxSharing = 2;
+        String configured = System.getenv("MEMORYGUARD_MAX_PAGE_SHARING");
+        if (configured != null && !configured.isBlank()) {
+            try {
+                maxSharing = Integer.parseInt(configured.trim());
+            } catch (NumberFormatException e) {
+                maxSharing = -1;
+            }
+            if (maxSharing < 2 || maxSharing > 256) {
+                System.err.println("[SECURITY] MEMORYGUARD_MAX_PAGE_SHARING must be 2-256, got: " + configured);
+                return false;
+            }
+            if (maxSharing > 2) {
+                System.out.println("[SECURITY] max_page_sharing=" + maxSharing
+                        + " requested — weaker CVE-2024-0564 mitigation than 2, higher savings");
+            }
+        }
+        boolean ok = ensureKnob("max_page_sharing", String.valueOf(maxSharing), true);
         // merge_across_nodes exists only on CONFIG_NUMA kernels
         ok &= ensureKnob("merge_across_nodes", "0", false);
 

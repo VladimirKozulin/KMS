@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
  *
  * Rules, evaluated in order (first match wins):
  *   1. label memoryguard.ksm=false                → deny (opt-out always wins)
+ *      or name/image matches MEMORYGUARD_EXCLUDE_CONTAINERS (exact or glob)
  *   2. label memoryguard.domain != host domain   → deny (different trust domain)
  *   3. image is a data store (redis, memcached…) → deny unless explicitly opted in
  *      — these keep attacker-controlled request data in memory, which is exactly
@@ -43,14 +44,24 @@ public final class TrustPolicy {
 
     private final List<String> whitelistGlobs;
     private final List<Pattern> whitelist;
+    private final List<String> excludeGlobs;
+    private final List<Pattern> exclude;
     private final boolean trustAll;
     private final String hostDomain;
     private final List<String> denyImages;
     private final boolean trustLabels;
 
     TrustPolicy(String whitelistSpec, String hostDomain, String denyImagesSpec, boolean trustLabels) {
+        this(whitelistSpec, null, hostDomain, denyImagesSpec, trustLabels);
+    }
+
+    TrustPolicy(String whitelistSpec, String excludeSpec, String hostDomain,
+                String denyImagesSpec, boolean trustLabels) {
         String spec = whitelistSpec == null ? "" : whitelistSpec.trim();
-        this.trustAll = "*".equals(spec);
+        this.trustAll = "*".equals(spec) || "all".equalsIgnoreCase(spec);
+        String excl = excludeSpec == null || "none".equalsIgnoreCase(excludeSpec.trim()) ? "" : excludeSpec;
+        this.excludeGlobs = splitList(excl);
+        this.exclude = compileGlobs(excludeGlobs);
         this.whitelistGlobs = trustAll ? List.of() : splitList(spec);
         this.whitelist = compileGlobs(whitelistGlobs);
         this.hostDomain = (hostDomain == null || hostDomain.isBlank()) ? DEFAULT_DOMAIN : hostDomain.trim();
@@ -61,16 +72,19 @@ public final class TrustPolicy {
     }
 
     public static TrustPolicy fromEnv() {
+        String exclude = System.getenv("MEMORYGUARD_EXCLUDE_CONTAINERS");
+        if (exclude == null || exclude.isBlank()) exclude = System.getenv("MEMORYGUARD_BLACKLIST");
         return new TrustPolicy(
                 System.getenv("MEMORYGUARD_CONTAINER_WHITELIST"),
+                exclude,
                 System.getenv("MEMORYGUARD_TRUST_DOMAIN"),
                 System.getenv("MEMORYGUARD_DENY_IMAGES"),
                 "true".equalsIgnoreCase(System.getenv("MEMORYGUARD_TRUST_LABELS")));
     }
 
     public String describe() {
-        return String.format("domain=%s, whitelist=%s, trustLabels=%s, denyImages=%s",
-                hostDomain, trustAll ? "*" : whitelistGlobs, trustLabels, denyImages);
+        return String.format("domain=%s, whitelist=%s, exclude=%s, trustLabels=%s, denyImages=%s",
+                hostDomain, trustAll ? "*" : whitelistGlobs, excludeGlobs, trustLabels, denyImages);
     }
 
     public Decision decide(DockerClient.ContainerInfo c) {
@@ -79,6 +93,11 @@ public final class TrustPolicy {
 
         if ("false".equalsIgnoreCase(ksmLabel)) {
             return new Decision(false, "opted out via label " + LABEL_KSM + "=false");
+        }
+        for (int i = 0; i < exclude.size(); i++) {
+            if (exclude.get(i).matcher(c.name).matches() || exclude.get(i).matcher(c.image).matches()) {
+                return new Decision(false, "excluded by MEMORYGUARD_EXCLUDE_CONTAINERS " + excludeGlobs.get(i));
+            }
         }
 
         String domain = labels.getOrDefault(LABEL_DOMAIN, DEFAULT_DOMAIN);

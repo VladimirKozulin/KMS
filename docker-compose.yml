@@ -1,0 +1,32 @@
+services:
+  memoryguard:
+    build:
+      context: ./memoryguard
+      dockerfile: Dockerfile
+    image: memoryguard:latest
+    container_name: memoryguard
+    restart: unless-stopped
+    # Минимальные права вместо privileged + seccomp=unconfined:
+    # RCE в HTTP-сервере не должно давать полный root хоста.
+    pid: host                    # видеть процессы контейнеров
+    cap_add:
+      - SYS_PTRACE               # инжекция madvise / чтение smaps чужих процессов
+    environment:
+      # Deny-by-default: какие контейнеры можно объединять (точно или glob с *).
+      # "*" или "all" = все контейнеры, кроме исключённых ниже.
+      - MEMORYGUARD_CONTAINER_WHITELIST=${MEMORYGUARD_CONTAINER_WHITELIST:-}
+      # Исключения (точно или glob), всегда сильнее whitelist:
+      # - MEMORYGUARD_EXCLUDE_CONTAINERS=vault,postgres,payment-*
+      - MEMORYGUARD_EXCLUDE_CONTAINERS=${MEMORYGUARD_EXCLUDE_CONTAINERS:-}
+      - MEMORYGUARD_TRUST_DOMAIN=${MEMORYGUARD_TRUST_DOMAIN:-default}
+      # Без токена API только для чтения. Сгенерировать: openssl rand -hex 32
+      - MEMORYGUARD_API_TOKEN=${MEMORYGUARD_API_TOKEN:-}
+    volumes:
+      # Только подсистема KSM, а не весь /sys
+      - /sys/kernel/mm/ksm:/sys/kernel/mm/ksm:rw
+      # Docker Engine — список контейнеров и их PID.
+      # В продакшене лучше docker-socket-proxy с доступом только к GET /containers/*
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      # Дашборд и REST API — только с localhost
+      - "127.0.0.1:8787:8787"

@@ -10,11 +10,12 @@ WORKDIR /build
 COPY pom.xml .
 COPY src ./src
 
-# Компилируем нативный исполняемый файл Java-агента
-RUN mvn clean package -Pnative
+# Компилируем нативный исполняемый файл Java-агента.
+# Кеш ~/.m2 переживает пересборки — зависимости не скачиваются заново.
+RUN --mount=type=cache,target=/root/.m2 mvn -B clean package -Pnative
 
 # Компилируем C-хелпер madvise_injector
-RUN gcc -O2 -o target/madvise_injector src/main/c/madvise_injector.c
+RUN gcc -O2 -Wall -Werror -o target/madvise_injector src/main/c/madvise_injector.c
 
 # --- Этап 2: Создание минимального рантайм-образа ---
 FROM debian:bookworm-slim

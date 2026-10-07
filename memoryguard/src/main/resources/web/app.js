@@ -1,11 +1,11 @@
-// Real-time chart configuration
+// Конфигурация графика в реальном времени
 let chart;
 const maxDataPoints = 30;
 const chartData = {
     labels: [],
     datasets: [
         {
-            label: 'Saved Memory (MB)',
+            label: 'Сэкономлено памяти (MB)',
             borderColor: '#238636',
             backgroundColor: 'rgba(35, 134, 84, 0.1)',
             borderWidth: 2,
@@ -14,7 +14,7 @@ const chartData = {
             yAxisID: 'y'
         },
         {
-            label: 'Host RAM Usage (%)',
+            label: 'Загрузка RAM хоста (%)',
             borderColor: '#58a6ff',
             backgroundColor: 'transparent',
             borderWidth: 2,
@@ -50,7 +50,7 @@ function initChart() {
                     ticks: { color: '#8b949e' },
                     title: {
                         display: true,
-                        text: 'Savings (MB)',
+                        text: 'Экономия (MB)',
                         color: '#8b949e'
                     }
                 },
@@ -64,7 +64,7 @@ function initChart() {
                     max: 100,
                     title: {
                         display: true,
-                        text: 'Usage (%)',
+                        text: 'Использование (%)',
                         color: '#8b949e'
                     }
                 }
@@ -78,7 +78,7 @@ function initChart() {
     });
 }
 
-// Update the chart with new data points
+// Добавление новых точек на график
 function updateChart(label, savedMb, usagePercent) {
     if (chart.data.labels.length >= maxDataPoints) {
         chart.data.labels.shift();
@@ -92,7 +92,7 @@ function updateChart(label, savedMb, usagePercent) {
     chart.update();
 }
 
-// API interaction calls
+// Запросы к REST API
 async function fetchStatus() {
     try {
         const response = await fetch('/api/status');
@@ -101,34 +101,31 @@ async function fetchStatus() {
 
         updateUI(data);
     } catch (error) {
-        console.error('Error fetching system status:', error);
+        console.error('Ошибка получения статуса системы:', error);
     }
 }
 
 function updateUI(data) {
-    // 1. Update Badge
+    // 1. Статус-бейдж
     const badge = document.getElementById('ksm-global-badge');
     if (!data.ksmSupported) {
-        badge.innerText = 'KSM: UNSUPPORTED';
+        badge.innerText = 'KSM: НЕ ПОДДЕРЖИВАЕТСЯ';
         badge.className = 'status-badge inactive';
     } else if (data.ksmRunning) {
-        badge.innerText = 'KSM: ACTIVE';
+        badge.innerText = 'KSM: АКТИВЕН';
         badge.className = 'status-badge active';
     } else {
-        badge.innerText = 'KSM: INACTIVE';
+        badge.innerText = 'KSM: ОТКЛЮЧЕН';
         badge.className = 'status-badge';
     }
 
-    // 2. Update KPI cards
+    // 2. Карточки KPI
     document.getElementById('val-saved-mem').innerText = data.savedMemoryMb.toFixed(2) + ' MB';
 
-    const scannedMb = (data.pagesToScan * 4096) / 1024 / 1024; // dummy scaling or total scanned
-    // Calculate percentage based on system total memory
+    // Процент от общей памяти хоста
     const totalSystemMemoryMb = data.systemTotalMemory / 1024 / 1024;
     const percentOfTotal = totalSystemMemoryMb > 0 ? (data.savedMemoryMb / totalSystemMemoryMb * 100) : 0;
-    document.getElementById('val-saved-percent').innerText = percentOfTotal.toFixed(2) + '% of total host memory';
-
-    document.getElementById('val-savings-usd').innerText = '$' + data.monthlySavingsUsd.toFixed(2);
+    document.getElementById('val-saved-percent').innerText = percentOfTotal.toFixed(2) + '% от всей памяти хоста';
 
     document.getElementById('val-sys-usage').innerText = data.systemMemoryUsagePercent.toFixed(1) + '%';
     const totalGb = data.systemTotalMemory / 1024 / 1024 / 1024;
@@ -136,7 +133,7 @@ function updateUI(data) {
     const usedGb = totalGb - availGb;
     document.getElementById('val-sys-details').innerText = usedGb.toFixed(2) + ' GB / ' + totalGb.toFixed(2) + ' GB';
 
-    // 3. Update Inputs & Toggles (if user is not editing them)
+    // 3. Переключатели и поля ввода
     if (!document.activeElement || document.activeElement.id !== 'btn-toggle-ksm') {
         document.getElementById('btn-toggle-ksm').checked = data.ksmRunning;
     }
@@ -161,14 +158,14 @@ function updateUI(data) {
         document.getElementById('input-zero-pages').checked = data.useZeroPages;
     }
 
-    // 4. Update Chart
+    // 4. Обновление графика
     const now = new Date();
     const timeStr = now.getHours().toString().padStart(2, '0') + ':' +
                     now.getMinutes().toString().padStart(2, '0') + ':' +
                     now.getSeconds().toString().padStart(2, '0');
     updateChart(timeStr, data.savedMemoryMb, data.systemMemoryUsagePercent);
 
-    // 5. Update Container Table
+    // 5. Таблица контейнеров
     const tableBody = document.getElementById('containers-table-body');
     tableBody.innerHTML = '';
 
@@ -189,15 +186,15 @@ function updateUI(data) {
         tableBody.innerHTML = `
             <tr>
                 <td colspan="4" class="text-center" style="color: #8b949e;">
-                    No running containers detected on the host socket.
+                    Запущенных контейнеров на хосте не обнаружено.
                 </td>
             </tr>
         `;
     }
 }
 
-// Control API calls need the token from MEMORYGUARD_API_TOKEN.
-// It is kept only in this browser's localStorage and asked for on first use.
+// Управляющие запросы требуют токен из MEMORYGUARD_API_TOKEN.
+// Он хранится только в localStorage этого браузера и запрашивается при первом использовании.
 function getApiToken() {
     try { return localStorage.getItem('mgApiToken') || ''; } catch (e) { return ''; }
 }
@@ -213,7 +210,7 @@ async function controlRequest(url, payload) {
             body: JSON.stringify(payload)
         });
         if (response.status === 401 && attempt === 0) {
-            const token = prompt('MemoryGuard API token (MEMORYGUARD_API_TOKEN):');
+            const token = prompt('Токен API MemoryGuard (MEMORYGUARD_API_TOKEN):');
             if (!token) break;
             try { localStorage.setItem('mgApiToken', token); } catch (e) { /* private mode */ }
             continue;
@@ -224,17 +221,17 @@ async function controlRequest(url, payload) {
         }
         return response;
     }
-    throw new Error('Not authorized');
+    throw new Error('Нет авторизации');
 }
 
-// Set up UI listeners
+// Слушатели событий интерфейса
 document.getElementById('btn-toggle-ksm').addEventListener('change', async (e) => {
     try {
         await controlRequest('/api/ksm/toggle', { run: e.target.checked });
         fetchStatus();
     } catch (err) {
-        console.error('Failed to toggle KSM:', err);
-        alert('Failed to toggle KSM: ' + err.message);
+        console.error('Не удалось переключить KSM:', err);
+        alert('Не удалось переключить KSM: ' + err.message);
         fetchStatus();
     }
 });
@@ -244,8 +241,8 @@ document.getElementById('btn-toggle-autotune').addEventListener('change', async 
         await controlRequest('/api/ksm/tune', { autoTune: e.target.checked });
         fetchStatus();
     } catch (err) {
-        console.error('Failed to toggle Autotune:', err);
-        alert('Failed to toggle Autotune: ' + err.message);
+        console.error('Не удалось переключить автоподстройку:', err);
+        alert('Не удалось переключить автоподстройку: ' + err.message);
         fetchStatus();
     }
 });
@@ -261,18 +258,18 @@ document.getElementById('btn-apply-tune').addEventListener('click', async () => 
             sleepMillisecs: sleepMillisecs,
             useZeroPages: useZeroPages
         });
-        alert('Tuning parameters updated successfully!');
+        alert('Параметры оптимизации успешно применены!');
         fetchStatus();
     } catch (err) {
-        console.error('Failed to update tuning:', err);
-        alert('Failed to update tuning: ' + err.message);
+        console.error('Не удалось применить параметры:', err);
+        alert('Не удалось применить параметры: ' + err.message);
     }
 });
 
-// Bootstrap
+// Инициализация при загрузке
 window.addEventListener('load', () => {
     initChart();
     fetchStatus();
-    // Poll metrics every 5 seconds
+    // Опрос метрик каждые 5 секунд
     setInterval(fetchStatus, 5000);
 });
