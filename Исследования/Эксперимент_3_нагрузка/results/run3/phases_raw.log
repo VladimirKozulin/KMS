@@ -1,0 +1,22 @@
+1791366048 2026-10-07 12:40:48 P0-idle concurrency=0x3 duration=2m
+1791366168 2026-10-07 12:42:48 P1-load concurrency=16x3 duration=4m
+1791366408 2026-10-07 12:46:48 P1b-high-load concurrency=48x3 duration=2m
+1791366548 2026-10-07 12:49:08 EVENT ksm enabled via API
+1791366548 2026-10-07 12:49:08 P2-ksm-mps2 concurrency=16x3 duration=20m
+1791366601 2026-10-07 12:50:01 EVENT java-pretouch x8 stopped
+1791366601 2026-10-07 12:50:02 P3-relief concurrency=16x3 duration=6m
+1791366975 2026-10-07 12:56:15 EVENT java-pretouch x8 started
+1791366975 2026-10-07 12:56:15 P4-redeploy concurrency=16x3 duration=10m
+1791367575 2026-10-07 13:06:16 P5-high-load-ksm concurrency=48x3 duration=3m
+1791367773 2026-10-07 13:09:33 EVENT java-pretouch x8 stopped
+1791367773 2026-10-07 13:09:33 P3-relief concurrency=16x3 duration=6m
+1791367791 2026-10-07 13:09:51 EVENT unmerge for mps=16 affordable: yes
+1791367802 2026-10-07 13:10:02 EVENT full unmerge done (run=2)
+1791367811 2026-10-07 13:10:11 EVENT ksm enabled via API
+1791367811 2026-10-07 13:10:11 P6-ksm-mps16 concurrency=16x3 duration=15m
+1791368142 2026-10-07 13:15:43 EVENT java-pretouch x8 started
+1791368143 2026-10-07 13:15:43 P4-redeploy concurrency=16x3 duration=10m
+1791368743 2026-10-07 13:25:43 P5-high-load-ksm concurrency=48x3 duration=3m
+1791368937 2026-10-07 13:28:57 EVENT unmerge for mps=16 affordable: no need=2177252kB avail=2972212kB
+1791368937 2026-10-07 13:28:57 P7-done concurrency=0x3 duration=1m
+1791368997 2026-10-07 13:29:57 FINISHED

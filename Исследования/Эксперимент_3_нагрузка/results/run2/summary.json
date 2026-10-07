@@ -1,0 +1,390 @@
+{
+  "P0-idle": {
+    "samples": 13,
+    "used_gib": 22.13,
+    "avail_pct": 13.0,
+    "swap_used_gib": 1.81,
+    "pages_shared": 0,
+    "pages_sharing": 0,
+    "ksm_zero_pages": 0,
+    "saved_sharing_gib": 0.0,
+    "saved_zero_gib": 0.0,
+    "general_profit_gib": 0.0,
+    "max_page_sharing": 256,
+    "pages_to_scan": [
+      100
+    ],
+    "sleep_ms": [
+      20
+    ],
+    "full_scans": 0,
+    "sys_cpu_pct": 1.85,
+    "busy_cpu_pct": 6.7,
+    "groups": {
+      "collector": {
+        "replicas": 1,
+        "mem_gib": 0.02,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-plain": {
+        "replicas": 6,
+        "mem_gib": 5.6,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-pretouch": {
+        "replicas": 8,
+        "mem_gib": 11.99,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "loadgen": {
+        "replicas": 3,
+        "mem_gib": 0.15,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "node": {
+        "replicas": 6,
+        "mem_gib": 1.21,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "python": {
+        "replicas": 6,
+        "mem_gib": 1.35,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "redis": {
+        "replicas": 2,
+        "mem_gib": 0.35,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      }
+    },
+    "latency": {}
+  },
+  "P1-load": {
+    "samples": 25,
+    "used_gib": 22.39,
+    "avail_pct": 12.0,
+    "swap_used_gib": 1.8,
+    "pages_shared": 0,
+    "pages_sharing": 0,
+    "ksm_zero_pages": 0,
+    "saved_sharing_gib": 0.0,
+    "saved_zero_gib": 0.0,
+    "general_profit_gib": 0.0,
+    "max_page_sharing": 256,
+    "pages_to_scan": [
+      100
+    ],
+    "sleep_ms": [
+      20
+    ],
+    "full_scans": 0,
+    "sys_cpu_pct": 20.89,
+    "busy_cpu_pct": 48.87,
+    "groups": {
+      "collector": {
+        "replicas": 1,
+        "mem_gib": 0.02,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-plain": {
+        "replicas": 6,
+        "mem_gib": 5.64,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-pretouch": {
+        "replicas": 8,
+        "mem_gib": 11.99,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "loadgen": {
+        "replicas": 3,
+        "mem_gib": 0.16,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "node": {
+        "replicas": 6,
+        "mem_gib": 1.21,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "python": {
+        "replicas": 6,
+        "mem_gib": 1.36,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "redis": {
+        "replicas": 2,
+        "mem_gib": 0.35,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      }
+    },
+    "latency": {
+      "java-pretouch": {
+        "rps": 563.2,
+        "p50": 16.5,
+        "p99": 35.3,
+        "p99_worst": 13076.0,
+        "errors": 0
+      },
+      "java-plain": {
+        "rps": 566.4,
+        "p50": 16.5,
+        "p99": 35.4,
+        "p99_worst": 10019.0,
+        "errors": 0
+      },
+      "python": {
+        "rps": 568.3,
+        "p50": 16.7,
+        "p99": 35.8,
+        "p99_worst": 10019.6,
+        "errors": 0
+      },
+      "node": {
+        "rps": 565.6,
+        "p50": 16.6,
+        "p99": 35.7,
+        "p99_worst": 20030.3,
+        "errors": 0
+      }
+    }
+  },
+  "P1b-high-load": {
+    "samples": 14,
+    "used_gib": 22.48,
+    "avail_pct": 11.6,
+    "swap_used_gib": 1.8,
+    "pages_shared": 0,
+    "pages_sharing": 0,
+    "ksm_zero_pages": 0,
+    "saved_sharing_gib": 0.0,
+    "saved_zero_gib": 0.0,
+    "general_profit_gib": 0.0,
+    "max_page_sharing": 256,
+    "pages_to_scan": [
+      100
+    ],
+    "sleep_ms": [
+      20
+    ],
+    "full_scans": 0,
+    "sys_cpu_pct": 21.18,
+    "busy_cpu_pct": 49.45,
+    "groups": {
+      "collector": {
+        "replicas": 1,
+        "mem_gib": 0.02,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-plain": {
+        "replicas": 6,
+        "mem_gib": 5.66,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-pretouch": {
+        "replicas": 8,
+        "mem_gib": 11.99,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "loadgen": {
+        "replicas": 3,
+        "mem_gib": 0.16,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "node": {
+        "replicas": 6,
+        "mem_gib": 1.25,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "python": {
+        "replicas": 6,
+        "mem_gib": 1.36,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "redis": {
+        "replicas": 2,
+        "mem_gib": 0.35,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      }
+    },
+    "latency": {
+      "java-pretouch": {
+        "rps": 586.0,
+        "p50": 50.2,
+        "p99": 117.1,
+        "p99_worst": 7142.5,
+        "errors": 0
+      },
+      "java-plain": {
+        "rps": 583.0,
+        "p50": 50.5,
+        "p99": 114.5,
+        "p99_worst": 3097.1,
+        "errors": 0
+      },
+      "python": {
+        "rps": 581.5,
+        "p50": 50.3,
+        "p99": 114.9,
+        "p99_worst": 5124.2,
+        "errors": 0
+      },
+      "node": {
+        "rps": 584.8,
+        "p50": 50.1,
+        "p99": 114.5,
+        "p99_worst": 7123.6,
+        "errors": 0
+      }
+    }
+  },
+  "P2-ksm-mps2": {
+    "samples": 52,
+    "used_gib": 22.44,
+    "avail_pct": 11.8,
+    "swap_used_gib": 1.8,
+    "pages_shared": 5076,
+    "pages_sharing": 5072,
+    "ksm_zero_pages": 286135,
+    "saved_sharing_gib": 0.02,
+    "saved_zero_gib": 1.09,
+    "general_profit_gib": 0.81,
+    "max_page_sharing": 2,
+    "pages_to_scan": [
+      354,
+      381,
+      391,
+      392,
+      398,
+      407,
+      431,
+      438,
+      443,
+      449,
+      455,
+      530,
+      541,
+      544,
+      546,
+      548,
+      549,
+      568,
+      578,
+      581,
+      628,
+      646,
+      647
+    ],
+    "sleep_ms": [
+      7,
+      8,
+      10,
+      11,
+      12,
+      13
+    ],
+    "full_scans": 3,
+    "sys_cpu_pct": 22.52,
+    "busy_cpu_pct": 51.88,
+    "groups": {
+      "collector": {
+        "replicas": 1,
+        "mem_gib": 0.02,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-plain": {
+        "replicas": 6,
+        "mem_gib": 5.66,
+        "ksm_merging_mib": 9.5,
+        "ksm_zero_mib": 10.7
+      },
+      "java-pretouch": {
+        "replicas": 8,
+        "mem_gib": 10.9,
+        "ksm_merging_mib": 26.0,
+        "ksm_zero_mib": 1106.1
+      },
+      "loadgen": {
+        "replicas": 3,
+        "mem_gib": 0.17,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "memoryguard": {
+        "replicas": 1,
+        "mem_gib": 0.04,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "node": {
+        "replicas": 6,
+        "mem_gib": 1.23,
+        "ksm_merging_mib": 1.8,
+        "ksm_zero_mib": 0.4
+      },
+      "python": {
+        "replicas": 6,
+        "mem_gib": 1.36,
+        "ksm_merging_mib": 2.3,
+        "ksm_zero_mib": 0.6
+      },
+      "redis": {
+        "replicas": 2,
+        "mem_gib": 0.35,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      }
+    },
+    "latency": {
+      "java-pretouch": {
+        "rps": 575.8,
+        "p50": 17.3,
+        "p99": 38.2,
+        "p99_worst": 10025.4,
+        "errors": 0
+      },
+      "java-plain": {
+        "rps": 576.5,
+        "p50": 17.4,
+        "p99": 37.9,
+        "p99_worst": 10031.9,
+        "errors": 0
+      },
+      "python": {
+        "rps": 577.1,
+        "p50": 17.6,
+        "p99": 38.2,
+        "p99_worst": 10050.5,
+        "errors": 0
+      },
+      "node": {
+        "rps": 578.6,
+        "p50": 17.4,
+        "p99": 38.4,
+        "p99_worst": 10034.1,
+        "errors": 0
+      }
+    }
+  }
+}

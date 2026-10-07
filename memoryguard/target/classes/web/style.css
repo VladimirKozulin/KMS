@@ -69,16 +69,24 @@ body {
 /* Dashboard Grid */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 2fr 1fr;
     gap: 20px;
 }
 
-.grid-col-2 {
-    grid-column: span 2;
+.kpi-card {
+    grid-column: span 1;
 }
 
-.grid-col-3 {
-    grid-column: span 3;
+.graph-card {
+    grid-column: span 1;
+}
+
+.controls-card {
+    grid-column: span 1;
+}
+
+.containers-card {
+    grid-column: span 2;
 }
 
 /* Cards styling */

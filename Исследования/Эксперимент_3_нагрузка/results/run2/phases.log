@@ -1,0 +1,6 @@
+1791364350 2026-10-07 12:12:30 P0-idle concurrency=0x3 duration=3m
+1791364530 2026-10-07 12:15:30 P1-load concurrency=16x3 duration=6m
+1791364890 2026-10-07 12:21:30 P1b-high-load concurrency=48x3 duration=3m
+1791365082 2026-10-07 12:24:42 EVENT ksm enabled via API
+1791365082 2026-10-07 12:24:42 P2-ksm-mps2 concurrency=16x3 duration=25m
+1791366830 2026-10-07 12:33:50 EVENT false-positive anomaly: volatile/sharing ratio -> ksmd frozen (run=0)

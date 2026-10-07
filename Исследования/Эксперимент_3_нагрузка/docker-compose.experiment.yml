@@ -1,0 +1,93 @@
+# Эксперимент 3: поведение MemoryGuard на разнородной нагрузке.
+# Запуск:  docker compose -p ksmexp -f docker-compose.experiment.yml up -d
+# MemoryGuard запускается отдельно (профиль "optimizer"), после замеров baseline.
+
+x-java: &java
+  image: eclipse-temurin:21-jre
+  volumes: ["./workloads/classes:/w:ro"]
+  command: ["sh", "-c", "exec java $$JAVA_OPTS -cp /w CatalogService"]
+
+services:
+  # JVM с -XX:+AlwaysPreTouch: весь heap сразу заполнен нулями (как adservice в прошлых опытах)
+  java-pretouch:
+    <<: *java
+    deploy: { replicas: 8 }
+    environment:
+      JAVA_OPTS: "-Xms1536m -Xmx1536m -XX:+UseG1GC -XX:+AlwaysPreTouch"
+      CATALOG_MB: "300"
+      PRIVATE_MB: "100"
+
+  # Обычная JVM без pretouch: память занята реальными данными
+  java-plain:
+    <<: *java
+    deploy: { replicas: 6 }
+    environment:
+      JAVA_OPTS: "-Xms512m -Xmx1536m -XX:+UseG1GC"
+      CATALOG_MB: "400"
+      PRIVATE_MB: "100"
+
+  python:
+    image: python:3.12-slim
+    deploy: { replicas: 6 }
+    volumes: ["./workloads:/w:ro"]
+    command: ["python", "/w/catalog_service.py"]
+    environment: { CATALOG_MB: "150", PRIVATE_MB: "50" }
+
+  node:
+    image: node:20-slim
+    deploy: { replicas: 6 }
+    volumes: ["./workloads:/w:ro"]
+    command: ["node", "--max-old-space-size=1536", "/w/catalog_service.js"]
+    environment: { CATALOG_MB: "150", PRIVATE_MB: "50" }
+
+  # Хранилище данных: политика MemoryGuard должна его ОТКЛОНИТЬ (защита от remote dedup)
+  redis:
+    image: redis:7-alpine
+    deploy: { replicas: 2 }
+    command: ["sh", "-c", "redis-server --save '' --appendonly no --enable-debug-command yes & sleep 2; redis-cli DEBUG POPULATE 400000 key 1000; wait"]
+
+  loadgen:
+    image: python:3.12-slim
+    deploy: { replicas: 3 }   # один Python-генератор упирался в GIL (прогон 1)
+    volumes: ["./loadgen.py:/loadgen.py:ro", "./results:/results", "./control:/control:ro"]
+    command: ["python", "/loadgen.py"]
+    environment:
+      TARGETS: "java-pretouch=http://java-pretouch:8080/,java-plain=http://java-plain:8080/,python=http://python:8080/,node=http://node:8080/"
+
+  collector:
+    image: python:3.12-slim
+    pid: host
+    cgroup: host
+    cap_add: [SYS_PTRACE]
+    volumes:
+      - "./collector.py:/collector.py:ro"
+      - "./results:/results"
+      - "./control:/control:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    command: ["python", "/collector.py"]
+
+  # Давление на память для проверки автонастройки (включается отдельно: --profile pressure)
+  hog:
+    image: python:3.12-slim
+    profiles: ["pressure"]
+    command: ["python", "-c", "import os,time; b=[os.urandom(1<<20) for _ in range(int(os.environ['HOG_MB']))]; print('hog ready', flush=True); time.sleep(10**9)"]
+    environment: { HOG_MB: "3500" }
+
+  # MemoryGuard в рекомендованном профиле (см. корневой docker-compose.yml)
+  memoryguard:
+    image: memoryguard:latest
+    profiles: ["optimizer"]
+    pid: host
+    cap_add: [SYS_PTRACE]
+    environment:
+      MEMORYGUARD_CONTAINER_WHITELIST: "ksmexp-*"
+      MEMORYGUARD_EXCLUDE_CONTAINERS: "ksmexp-loadgen-*,ksmexp-collector-*,ksmexp-hog-*,ksmexp-memoryguard-*"
+      MEMORYGUARD_API_TOKEN: "experiment-token"
+      MEMORYGUARD_MAX_PAGE_SHARING: "${MPS:-2}"
+      MEMORYGUARD_TUNER: "${TUNER:-adaptive}"
+      MEMORYGUARD_KSM_AUTOSTART: "true"
+      MEMORYGUARD_REINJECT_MINUTES: "${REINJECT:-3}"
+    volumes:
+      - "/sys/kernel/mm/ksm:/sys/kernel/mm/ksm:rw"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    ports: ["127.0.0.1:8787:8787"]

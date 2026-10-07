@@ -1,0 +1,8 @@
+1791361667 2026-10-07 11:27:47 P0-idle concurrency=0 duration=3m
+1791361848 2026-10-07 11:30:48 P1-load concurrency=32 duration=6m
+1791362208 2026-10-07 11:36:48 P1b-high-load concurrency=128 duration=3m
+1791362397 2026-10-07 11:39:57 P2-ksm-mps2 concurrency=32 duration=20m
+1791363610 2026-10-07 12:00:10 P3-pressure concurrency=32 duration=8m
+1791364122 2026-10-07 12:08:42 P4-pressure-off concurrency=32 duration=5m
+run_phases.sh: line 28: syntax error near unexpected token `}'
+run_phases.sh: line 28: `return; }'

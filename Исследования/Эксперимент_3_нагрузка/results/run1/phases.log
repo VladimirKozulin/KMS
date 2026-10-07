@@ -1,0 +1,40 @@
+1791361667 2026-10-07 11:27:47 P0-idle concurrency=0 duration=3m
+1791361848 2026-10-07 11:30:48 P1-load concurrency=32 duration=6m
+1791362208 2026-10-07 11:36:48 P1b-high-load concurrency=128 duration=3m
+ Container ksmexp-java-plain-6 Running 
+ Container ksmexp-java-plain-5 Running 
+ Container ksmexp-java-plain-3 Running 
+ Container ksmexp-java-plain-2 Running 
+ Container ksmexp-java-plain-4 Running 
+ Container ksmexp-java-plain-1 Running 
+ Container ksmexp-redis-1 Running 
+ Container ksmexp-redis-2 Running 
+ Container ksmexp-collector-1 Running 
+ Container ksmexp-loadgen-1 Running 
+ Container ksmexp-java-pretouch-7 Running 
+ Container ksmexp-java-pretouch-8 Running 
+ Container ksmexp-java-pretouch-1 Running 
+ Container ksmexp-java-pretouch-3 Running 
+ Container ksmexp-java-pretouch-5 Running 
+ Container ksmexp-java-pretouch-4 Running 
+ Container ksmexp-java-pretouch-6 Running 
+ Container ksmexp-java-pretouch-2 Running 
+ Container ksmexp-node-4 Running 
+ Container ksmexp-node-3 Running 
+ Container ksmexp-node-2 Running 
+ Container ksmexp-node-5 Running 
+ Container ksmexp-node-6 Running 
+ Container ksmexp-node-1 Running 
+ Container ksmexp-python-3 Running 
+ Container ksmexp-python-6 Running 
+ Container ksmexp-python-4 Running 
+ Container ksmexp-python-1 Running 
+ Container ksmexp-python-2 Running 
+ Container ksmexp-python-5 Running 
+ Container ksmexp-memoryguard-1 Creating 
+ Container ksmexp-memoryguard-1 Created 
+ Container ksmexp-memoryguard-1 Starting 
+ Container ksmexp-memoryguard-1 Started 
+1791362397 2026-10-07 11:39:57 P2-ksm-mps2 concurrency=32 duration=20m
+1791362497 2026-10-07 11:41:37 EVENT ksm enabled via API (run=1)
+1791363040 2026-10-07 11:50:40 EVENT false-positive anomaly: pages_sharing spike -> ksmd frozen (run=0)

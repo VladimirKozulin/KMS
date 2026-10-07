@@ -1,0 +1,9 @@
+1791370681 2026-10-07 13:58:01 RUN5-START
+1791370696 2026-10-07 13:58:16 EVENT java-pretouch stopped, full unmerge done
+1791370707 2026-10-07 13:58:27 EVENT java-pretouch x8 started
+1791370707 2026-10-07 13:58:27 R5-idle-no-ksm concurrency=0x3 duration=3m
+1791370890 2026-10-07 14:01:30 EVENT memoryguard mps=2 started, ksm enabled via API
+1791370890 2026-10-07 14:01:30 R5-idle-ksm-mps2 concurrency=0x3 duration=15m
+1791371790 2026-10-07 14:16:30 R5-load-after-idle concurrency=16x3 duration=6m
+1791372156 2026-10-07 14:22:36 R5-done concurrency=0x3 duration=1m
+1791372216 2026-10-07 14:23:36 FINISHED

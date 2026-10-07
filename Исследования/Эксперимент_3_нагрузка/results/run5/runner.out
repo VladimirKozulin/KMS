@@ -1,0 +1,83 @@
+1791370681 2026-10-07 13:58:01 RUN5-START
+ Container ksmexp-java-pretouch-7 Stopping 
+ Container ksmexp-java-pretouch-1 Stopping 
+ Container ksmexp-java-pretouch-3 Stopping 
+ Container ksmexp-java-pretouch-2 Stopping 
+ Container ksmexp-java-pretouch-8 Stopping 
+ Container ksmexp-java-pretouch-6 Stopping 
+ Container ksmexp-java-pretouch-4 Stopping 
+ Container ksmexp-java-pretouch-5 Stopping 
+ Container ksmexp-java-pretouch-7 Stopped 
+ Container ksmexp-java-pretouch-1 Stopped 
+ Container ksmexp-java-pretouch-2 Stopped 
+ Container ksmexp-java-pretouch-4 Stopped 
+ Container ksmexp-java-pretouch-6 Stopped 
+ Container ksmexp-java-pretouch-3 Stopped 
+ Container ksmexp-java-pretouch-8 Stopped 
+ Container ksmexp-java-pretouch-5 Stopped 
+No stopped containers
+1791370696 2026-10-07 13:58:16 EVENT java-pretouch stopped, full unmerge done
+ Container ksmexp-java-pretouch-3 Starting 
+ Container ksmexp-java-pretouch-3 Started 
+ Container ksmexp-java-pretouch-5 Starting 
+ Container ksmexp-java-pretouch-5 Started 
+ Container ksmexp-java-pretouch-8 Starting 
+ Container ksmexp-java-pretouch-8 Started 
+ Container ksmexp-java-pretouch-1 Starting 
+ Container ksmexp-java-pretouch-1 Started 
+ Container ksmexp-java-pretouch-6 Starting 
+ Container ksmexp-java-pretouch-6 Started 
+ Container ksmexp-java-pretouch-2 Starting 
+ Container ksmexp-java-pretouch-2 Started 
+ Container ksmexp-java-pretouch-4 Starting 
+ Container ksmexp-java-pretouch-4 Started 
+ Container ksmexp-java-pretouch-7 Starting 
+ Container ksmexp-java-pretouch-7 Started 
+1791370707 2026-10-07 13:58:27 EVENT java-pretouch x8 started
+1791370707 2026-10-07 13:58:27 R5-idle-no-ksm concurrency=0x3 duration=3m
+ Container ksmexp-node-2 Running 
+ Container ksmexp-node-5 Running 
+ Container ksmexp-node-3 Running 
+ Container ksmexp-node-6 Running 
+ Container ksmexp-node-1 Running 
+ Container ksmexp-node-4 Running 
+ Container ksmexp-java-plain-4 Running 
+ Container ksmexp-java-plain-5 Running 
+ Container ksmexp-java-plain-2 Running 
+ Container ksmexp-java-plain-6 Running 
+ Container ksmexp-java-plain-3 Running 
+ Container ksmexp-java-plain-1 Running 
+ Container ksmexp-loadgen-2 Running 
+ Container ksmexp-loadgen-1 Running 
+ Container ksmexp-loadgen-3 Running 
+ Container ksmexp-python-6 Running 
+ Container ksmexp-python-3 Running 
+ Container ksmexp-python-4 Running 
+ Container ksmexp-python-2 Running 
+ Container ksmexp-python-1 Running 
+ Container ksmexp-python-5 Running 
+ Container ksmexp-redis-1 Running 
+ Container ksmexp-redis-2 Running 
+ Container ksmexp-collector-1 Running 
+ Container ksmexp-java-pretouch-3 Running 
+ Container ksmexp-java-pretouch-5 Running 
+ Container ksmexp-java-pretouch-8 Running 
+ Container ksmexp-java-pretouch-1 Running 
+ Container ksmexp-java-pretouch-6 Running 
+ Container ksmexp-java-pretouch-2 Running 
+ Container ksmexp-java-pretouch-4 Running 
+ Container ksmexp-java-pretouch-7 Running 
+ Container ksmexp-memoryguard-1 Creating 
+ Container ksmexp-memoryguard-1 Created 
+ Container ksmexp-memoryguard-1 Starting 
+ Container ksmexp-memoryguard-1 Started 
+1791370890 2026-10-07 14:01:30 EVENT memoryguard mps=2 started, ksm enabled via API
+1791370890 2026-10-07 14:01:30 R5-idle-ksm-mps2 concurrency=0x3 duration=15m
+1791371790 2026-10-07 14:16:30 R5-load-after-idle concurrency=16x3 duration=6m
+ Container ksmexp-memoryguard-1 Stopping 
+ Container ksmexp-memoryguard-1 Stopped 
+Going to remove ksmexp-memoryguard-1
+ Container ksmexp-memoryguard-1 Removing 
+ Container ksmexp-memoryguard-1 Removed 
+1791372156 2026-10-07 14:22:36 R5-done concurrency=0x3 duration=1m
+1791372216 2026-10-07 14:23:36 FINISHED

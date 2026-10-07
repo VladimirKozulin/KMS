@@ -1,0 +1,75 @@
+memoryguard-1  | 2026-10-07T10:10:05.511883513Z === Starting MemoryGuard Agent ===
+memoryguard-1  | 2026-10-07T10:10:05.512639375Z [OK] KSM kernel subsystem detected.
+memoryguard-1  | 2026-10-07T10:10:05.512866193Z [SECURITY] max_page_sharing=16 requested — weaker CVE-2024-0564 mitigation than 2, higher savings
+memoryguard-1  | 2026-10-07T10:10:05.513115713Z [SECURITY] max_page_sharing=16 (verified)
+memoryguard-1  | 2026-10-07T10:10:05.513126514Z [SECURITY] merge_across_nodes=0 (already set)
+memoryguard-1  | 2026-10-07T10:10:05.513129015Z [SECURITY] use_zero_pages enabled (safe optimization)
+memoryguard-1  | 2026-10-07T10:10:05.513131315Z [OK] KSM security hardening parameters applied and verified.
+memoryguard-1  | 2026-10-07T10:10:05.513133515Z [OK] KSM anomaly detector initialized.
+memoryguard-1  | 2026-10-07T10:10:05.516074054Z [OK] Adaptive KsmTuner daemon thread started (with anti-timing + periodic unmerge).
+memoryguard-1  | 2026-10-07T10:10:05.516546192Z [OK] Docker socket connection available.
+memoryguard-1  | 2026-10-07T10:10:05.516770410Z [SECURITY] Trust policy: domain=default, whitelist=[ksmexp-*], exclude=[ksmexp-loadgen-*, ksmexp-collector-*, ksmexp-hog-*, ksmexp-memoryguard-*], trustLabels=false, denyImages=[redis, valkey, keydb, memcached, dragonfly, mysql, mariadb, postgres, mongo, cassandra, elasticsearch, vault, keycloak, etcd, consul]
+memoryguard-1  | 2026-10-07T10:10:05.517121439Z [OK] Container Madvise Injector daemon thread started.
+memoryguard-1  | 2026-10-07T10:10:05.521369984Z HTTP Server started on 0.0.0.0:8787 (control API: token required)
+memoryguard-1  | 2026-10-07T10:10:05.521388586Z [OK] MemoryGuard Dashboard API Server is running on http://localhost:8787
+memoryguard-1  | 2026-10-07T10:10:05.521392586Z === MemoryGuard Agent fully started with KSM side-channel protection ===
+memoryguard-1  | 2026-10-07T10:10:35.804117692Z [SECURITY] ksmexp-memoryguard-1: skip — excluded by MEMORYGUARD_EXCLUDE_CONTAINERS ksmexp-memoryguard-*
+memoryguard-1  | 2026-10-07T10:10:35.804143895Z [SECURITY] ksmexp-loadgen-2: skip — excluded by MEMORYGUARD_EXCLUDE_CONTAINERS ksmexp-loadgen-*
+memoryguard-1  | 2026-10-07T10:10:35.804147595Z [SECURITY] ksmexp-loadgen-1: skip — excluded by MEMORYGUARD_EXCLUDE_CONTAINERS ksmexp-loadgen-*
+memoryguard-1  | 2026-10-07T10:10:35.804150495Z [SECURITY] ksmexp-loadgen-3: skip — excluded by MEMORYGUARD_EXCLUDE_CONTAINERS ksmexp-loadgen-*
+memoryguard-1  | 2026-10-07T10:10:35.804152995Z [SECURITY] ksmexp-python-6: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:35.834594053Z [KSM-INJECT] [injector] PID 59057 (merge): marked=32768 KB, failed=0 KB, ok_calls=4, err_calls=0 | skipped: lib-bss=1 (12 KB), secret-vmflag=1 (4 KB), thread-stack=0 (0 KB), small=1, pseudo=4, already=30
+memoryguard-1  | 2026-10-07T10:10:35.834624456Z [SECURITY] ksmexp-redis-1: skip — image 'redis' holds attacker-controlled data (remote dedup risk); override with label memoryguard.ksm=true + MEMORYGUARD_TRUST_LABELS=true
+memoryguard-1  | 2026-10-07T10:10:35.834628556Z [SECURITY] ksmexp-node-2: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:35.871016894Z [KSM-INJECT] [injector] PID 59097 (merge): marked=5888 KB, failed=0 KB, ok_calls=23, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=6 (40992 KB), small=0, pseudo=4, already=464
+memoryguard-1  | 2026-10-07T10:10:35.871046697Z [SECURITY] ksmexp-python-3: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:35.904251578Z [KSM-INJECT] [injector] PID 59444 (merge): marked=32768 KB, failed=0 KB, ok_calls=4, err_calls=0 | skipped: lib-bss=1 (12 KB), secret-vmflag=1 (4 KB), thread-stack=0 (0 KB), small=1, pseudo=4, already=28
+memoryguard-1  | 2026-10-07T10:10:35.904296282Z [SECURITY] ksmexp-redis-2: skip — image 'redis' holds attacker-controlled data (remote dedup risk); override with label memoryguard.ksm=true + MEMORYGUARD_TRUST_LABELS=true
+memoryguard-1  | 2026-10-07T10:10:35.904300982Z [SECURITY] ksmexp-java-plain-4: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:35.950151084Z [KSM-INJECT] [injector] PID 59007 (merge): marked=0 KB, failed=0 KB, ok_calls=0, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=23 (43804 KB), small=3, pseudo=4, already=72
+memoryguard-1  | 2026-10-07T10:10:35.950182987Z [SECURITY] ksmexp-python-4: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:35.982188071Z [KSM-INJECT] [injector] PID 60113 (merge): marked=32768 KB, failed=0 KB, ok_calls=4, err_calls=0 | skipped: lib-bss=1 (12 KB), secret-vmflag=1 (4 KB), thread-stack=0 (0 KB), small=1, pseudo=4, already=28
+memoryguard-1  | 2026-10-07T10:10:35.982248976Z [SECURITY] ksmexp-collector-1: skip — excluded by MEMORYGUARD_EXCLUDE_CONTAINERS ksmexp-collector-*
+memoryguard-1  | 2026-10-07T10:10:35.982257477Z [SECURITY] ksmexp-python-2: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.012416112Z [KSM-INJECT] [injector] PID 60534 (merge): marked=32768 KB, failed=0 KB, ok_calls=4, err_calls=0 | skipped: lib-bss=1 (12 KB), secret-vmflag=1 (4 KB), thread-stack=0 (0 KB), small=1, pseudo=4, already=29
+memoryguard-1  | 2026-10-07T10:10:36.012447715Z [SECURITY] ksmexp-node-5: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.047903778Z [KSM-INJECT] [injector] PID 59565 (merge): marked=3840 KB, failed=0 KB, ok_calls=15, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=6 (40992 KB), small=0, pseudo=4, already=471
+memoryguard-1  | 2026-10-07T10:10:36.047933180Z [SECURITY] ksmexp-java-plain-5: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.093524162Z [KSM-INJECT] [injector] PID 59355 (merge): marked=20 KB, failed=0 KB, ok_calls=1, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=24 (43804 KB), small=3, pseudo=4, already=73
+memoryguard-1  | 2026-10-07T10:10:36.093553664Z [SECURITY] ksmexp-node-3: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.129155939Z [KSM-INJECT] [injector] PID 60231 (merge): marked=4616 KB, failed=0 KB, ok_calls=18, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=6 (40992 KB), small=0, pseudo=4, already=470
+memoryguard-1  | 2026-10-07T10:10:36.129188641Z [SECURITY] ksmexp-java-plain-2: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.171268739Z [KSM-INJECT] [injector] PID 60035 (merge): marked=0 KB, failed=0 KB, ok_calls=0, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=23 (43804 KB), small=5, pseudo=4, already=79
+memoryguard-1  | 2026-10-07T10:10:36.171338445Z [SECURITY] ksmexp-python-1: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.200710817Z [KSM-INJECT] [injector] PID 60808 (merge): marked=32768 KB, failed=0 KB, ok_calls=4, err_calls=0 | skipped: lib-bss=1 (12 KB), secret-vmflag=1 (4 KB), thread-stack=0 (0 KB), small=1, pseudo=4, already=30
+memoryguard-1  | 2026-10-07T10:10:36.200737419Z [SECURITY] ksmexp-node-6: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.236254087Z [KSM-INJECT] [injector] PID 60465 (merge): marked=4352 KB, failed=0 KB, ok_calls=17, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=6 (40992 KB), small=1, pseudo=4, already=470
+memoryguard-1  | 2026-10-07T10:10:36.236290490Z [SECURITY] ksmexp-python-5: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.266447525Z [KSM-INJECT] [injector] PID 61161 (merge): marked=32768 KB, failed=0 KB, ok_calls=4, err_calls=0 | skipped: lib-bss=1 (12 KB), secret-vmflag=1 (4 KB), thread-stack=0 (0 KB), small=1, pseudo=4, already=29
+memoryguard-1  | 2026-10-07T10:10:36.266476027Z [SECURITY] ksmexp-java-plain-6: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.308983660Z [KSM-INJECT] [injector] PID 60387 (merge): marked=0 KB, failed=0 KB, ok_calls=0, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=23 (43804 KB), small=3, pseudo=4, already=78
+memoryguard-1  | 2026-10-07T10:10:36.309013162Z [SECURITY] ksmexp-node-1: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.346150161Z [KSM-INJECT] [injector] PID 60886 (merge): marked=4352 KB, failed=0 KB, ok_calls=17, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=6 (40992 KB), small=0, pseudo=4, already=468
+memoryguard-1  | 2026-10-07T10:10:36.346182863Z [SECURITY] ksmexp-node-4: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.388467278Z [KSM-INJECT] [injector] PID 61232 (merge): marked=5132 KB, failed=0 KB, ok_calls=21, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=6 (40992 KB), small=0, pseudo=4, already=467
+memoryguard-1  | 2026-10-07T10:10:36.388493580Z [SECURITY] ksmexp-java-plain-3: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.430084238Z [KSM-INJECT] [injector] PID 60710 (merge): marked=0 KB, failed=0 KB, ok_calls=0, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=24 (44812 KB), small=3, pseudo=4, already=73
+memoryguard-1  | 2026-10-07T10:10:36.430113441Z [SECURITY] ksmexp-java-plain-1: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:10:36.475611615Z [KSM-INJECT] [injector] PID 61024 (merge): marked=0 KB, failed=0 KB, ok_calls=0, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=24 (44812 KB), small=3, pseudo=4, already=73
+memoryguard-1  | 2026-10-07T10:15:42.668959107Z [SECURITY] ksmexp-java-pretouch-3: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:15:42.837963524Z [KSM-INJECT] [injector] PID 61180 (merge): marked=1728700 KB, failed=0 KB, ok_calls=77, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=27 (43744 KB), small=3, pseudo=4, already=0
+memoryguard-1  | 2026-10-07T10:15:42.838016828Z [SECURITY] ksmexp-java-pretouch-5: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:15:43.137387130Z [KSM-INJECT] [injector] PID 61879 (merge): marked=1712792 KB, failed=0 KB, ok_calls=75, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=28 (44752 KB), small=3, pseudo=4, already=0
+memoryguard-1  | 2026-10-07T10:15:43.137432134Z [SECURITY] ksmexp-java-pretouch-8: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:15:43.316490013Z [KSM-INJECT] [injector] PID 62598 (merge): marked=1709356 KB, failed=0 KB, ok_calls=72, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=28 (45760 KB), small=3, pseudo=4, already=0
+memoryguard-1  | 2026-10-07T10:15:43.405603996Z [SECURITY] ksmexp-java-pretouch-1: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:15:43.522286036Z [KSM-INJECT] [injector] PID 63221 (merge): marked=1703752 KB, failed=0 KB, ok_calls=67, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=13 (30640 KB), small=3, pseudo=4, already=0
+memoryguard-1  | 2026-10-07T10:15:43.522347039Z [SECURITY] ksmexp-java-pretouch-6: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:15:43.622738647Z [KSM-INJECT] [injector] PID 63789 (merge): marked=1703032 KB, failed=0 KB, ok_calls=66, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=13 (31648 KB), small=3, pseudo=4, already=0
+memoryguard-1  | 2026-10-07T10:15:43.652963104Z [SECURITY] ksmexp-java-pretouch-2: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:15:43.720781450Z [KSM-INJECT] [injector] PID 64417 (merge): marked=1703792 KB, failed=0 KB, ok_calls=66, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=14 (31648 KB), small=3, pseudo=4, already=0
+memoryguard-1  | 2026-10-07T10:15:43.720833052Z [SECURITY] ksmexp-java-pretouch-4: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:15:43.795595309Z [KSM-INJECT] [injector] PID 65093 (merge): marked=1704936 KB, failed=0 KB, ok_calls=65, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=13 (30640 KB), small=3, pseudo=4, already=0
+memoryguard-1  | 2026-10-07T10:16:14.934341235Z [SECURITY] ksmexp-java-pretouch-7: MERGE — whitelist name ksmexp-*
+memoryguard-1  | 2026-10-07T10:16:15.013820727Z [KSM-INJECT] [injector] PID 65630 (merge): marked=1731216 KB, failed=0 KB, ok_calls=78, err_calls=0 | skipped: lib-bss=0 (0 KB), secret-vmflag=0 (0 KB), thread-stack=24 (40720 KB), small=3, pseudo=4, already=0
+memoryguard-1  | 2026-10-07T10:22:06.154737177Z [SECURITY] Periodic unmerge skipped: needs 1858 MB, not enough headroom (OOM risk)

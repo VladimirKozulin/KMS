@@ -1,0 +1,9 @@
+1791369075 2026-10-07 13:31:16 RUN4-START
+1791369084 2026-10-07 13:31:24 EVENT java-pretouch stopped, full unmerge done
+1791369098 2026-10-07 13:31:38 EVENT java-pretouch x8 started
+1791369098 2026-10-07 13:31:38 R4A-mps2 concurrency=16x3 duration=12m
+1791369847 2026-10-07 13:44:07 EVENT java-pretouch stopped, full unmerge done
+1791369876 2026-10-07 13:44:36 EVENT java-pretouch x8 started
+1791369876 2026-10-07 13:44:36 R4B-mps16 concurrency=16x3 duration=12m
+1791370601 2026-10-07 13:56:41 R4-done concurrency=0x3 duration=1m
+1791370661 2026-10-07 13:57:41 FINISHED

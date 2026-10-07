@@ -1,0 +1,50 @@
+1791364350 2026-10-07 12:12:30 P0-idle concurrency=0x3 duration=3m
+1791364530 2026-10-07 12:15:30 P1-load concurrency=16x3 duration=6m
+1791364890 2026-10-07 12:21:30 P1b-high-load concurrency=48x3 duration=3m
+ Container ksmexp-python-6 Running 
+ Container ksmexp-python-3 Running 
+ Container ksmexp-python-4 Running 
+ Container ksmexp-python-2 Running 
+ Container ksmexp-python-1 Running 
+ Container ksmexp-python-5 Running 
+ Container ksmexp-redis-1 Running 
+ Container ksmexp-redis-2 Running 
+ Container ksmexp-java-plain-4 Running 
+ Container ksmexp-java-plain-5 Running 
+ Container ksmexp-java-plain-2 Running 
+ Container ksmexp-java-plain-6 Running 
+ Container ksmexp-java-plain-3 Running 
+ Container ksmexp-java-plain-1 Running 
+ Container ksmexp-java-pretouch-3 Running 
+ Container ksmexp-java-pretouch-5 Running 
+ Container ksmexp-java-pretouch-8 Running 
+ Container ksmexp-java-pretouch-1 Running 
+ Container ksmexp-java-pretouch-6 Running 
+ Container ksmexp-java-pretouch-2 Running 
+ Container ksmexp-java-pretouch-4 Running 
+ Container ksmexp-java-pretouch-7 Running 
+ Container ksmexp-loadgen-2 Running 
+ Container ksmexp-loadgen-1 Running 
+ Container ksmexp-loadgen-3 Running 
+ Container ksmexp-node-2 Running 
+ Container ksmexp-node-5 Running 
+ Container ksmexp-node-3 Running 
+ Container ksmexp-node-6 Running 
+ Container ksmexp-node-1 Running 
+ Container ksmexp-node-4 Running 
+ Container ksmexp-collector-1 Running 
+ Container ksmexp-memoryguard-1 Creating 
+ Container ksmexp-memoryguard-1 Created 
+ Container ksmexp-memoryguard-1 Starting 
+ Container ksmexp-memoryguard-1 Started 
+1791365082 2026-10-07 12:24:42 EVENT ksm enabled via API
+1791365082 2026-10-07 12:24:42 P2-ksm-mps2 concurrency=16x3 duration=25m
+1791366601 2026-10-07 12:50:01 EVENT java-pretouch x8 stopped
+1791366601 2026-10-07 12:50:02 P3-relief concurrency=16x3 duration=6m
+1791366975 2026-10-07 12:56:15 EVENT java-pretouch x8 started
+1791366975 2026-10-07 12:56:15 P4-redeploy concurrency=16x3 duration=10m
+1791367575 2026-10-07 13:06:16 P5-high-load-ksm concurrency=48x3 duration=3m
+1791367791 2026-10-07 13:09:51 EVENT unmerge for mps=16 affordable: yes
+1791367802 2026-10-07 13:10:02 EVENT full unmerge done (run=2)
+1791367811 2026-10-07 13:10:11 EVENT ksm enabled via API
+1791367811 2026-10-07 13:10:11 P6-ksm-mps16 concurrency=16x3 duration=15m

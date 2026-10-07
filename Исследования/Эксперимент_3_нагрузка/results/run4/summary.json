@@ -1,0 +1,376 @@
+{
+  "R4A-mps2": {
+    "samples": 51,
+    "used_gib": 21.99,
+    "avail_pct": 13.6,
+    "swap_used_gib": 0.5,
+    "pages_shared": 7614,
+    "pages_sharing": 7504,
+    "ksm_zero_pages": 527793,
+    "saved_sharing_gib": 0.03,
+    "saved_zero_gib": 2.01,
+    "general_profit_gib": 1.75,
+    "max_page_sharing": 2,
+    "pages_to_scan": [
+      350,
+      394,
+      398,
+      400,
+      410,
+      412,
+      432,
+      434,
+      442,
+      457,
+      459,
+      473,
+      480,
+      481,
+      488,
+      489,
+      492,
+      518,
+      531,
+      534,
+      544,
+      569,
+      585,
+      596,
+      602,
+      616,
+      623,
+      630,
+      639,
+      649,
+      650
+    ],
+    "sleep_ms": [
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "full_scans": 4,
+    "sys_cpu_pct": 22.18,
+    "busy_cpu_pct": 51.04,
+    "groups": {
+      "collector": {
+        "replicas": 1,
+        "mem_gib": 0.02,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-plain": {
+        "replicas": 6,
+        "mem_gib": 5.67,
+        "ksm_merging_mib": 8.3,
+        "ksm_zero_mib": 11.5
+      },
+      "java-pretouch": {
+        "replicas": 8,
+        "mem_gib": 10.83,
+        "ksm_merging_mib": 46.5,
+        "ksm_zero_mib": 2048.9
+      },
+      "loadgen": {
+        "replicas": 3,
+        "mem_gib": 0.17,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "memoryguard": {
+        "replicas": 1,
+        "mem_gib": 0.05,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "node": {
+        "replicas": 6,
+        "mem_gib": 1.24,
+        "ksm_merging_mib": 2.1,
+        "ksm_zero_mib": 0.4
+      },
+      "python": {
+        "replicas": 6,
+        "mem_gib": 1.36,
+        "ksm_merging_mib": 2.2,
+        "ksm_zero_mib": 0.6
+      },
+      "redis": {
+        "replicas": 2,
+        "mem_gib": 0.35,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      }
+    },
+    "latency": {
+      "java-pretouch": {
+        "rps": 572.1,
+        "p50": 16.8,
+        "p99": 37.4,
+        "p99_worst": 13089.2,
+        "errors": 0
+      },
+      "java-plain": {
+        "rps": 571.6,
+        "p50": 16.8,
+        "p99": 37.5,
+        "p99_worst": 12056.4,
+        "errors": 0
+      },
+      "python": {
+        "rps": 570.3,
+        "p50": 17.1,
+        "p99": 37.9,
+        "p99_worst": 13095.5,
+        "errors": 0
+      },
+      "node": {
+        "rps": 573.2,
+        "p50": 16.8,
+        "p99": 37.4,
+        "p99_worst": 10023.1,
+        "errors": 0
+      }
+    }
+  },
+  "R4B-mps16": {
+    "samples": 50,
+    "used_gib": 22.36,
+    "avail_pct": 12.1,
+    "swap_used_gib": 0.5,
+    "pages_shared": 3016,
+    "pages_sharing": 11839,
+    "ksm_zero_pages": 512658,
+    "saved_sharing_gib": 0.05,
+    "saved_zero_gib": 1.96,
+    "general_profit_gib": 1.71,
+    "max_page_sharing": 16,
+    "pages_to_scan": [
+      361,
+      382,
+      404,
+      409,
+      415,
+      418,
+      420,
+      421,
+      429,
+      431,
+      448,
+      449,
+      453,
+      473,
+      480,
+      483,
+      498,
+      504,
+      516,
+      517,
+      518,
+      523,
+      557,
+      575,
+      577,
+      578,
+      586,
+      599,
+      607,
+      615,
+      635,
+      646,
+      647
+    ],
+    "sleep_ms": [
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "full_scans": 4,
+    "sys_cpu_pct": 22.81,
+    "busy_cpu_pct": 52.33,
+    "groups": {
+      "collector": {
+        "replicas": 1,
+        "mem_gib": 0.02,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-plain": {
+        "replicas": 6,
+        "mem_gib": 5.65,
+        "ksm_merging_mib": 9.3,
+        "ksm_zero_mib": 29.1
+      },
+      "java-pretouch": {
+        "replicas": 8,
+        "mem_gib": 10.92,
+        "ksm_merging_mib": 43.8,
+        "ksm_zero_mib": 1973.3
+      },
+      "loadgen": {
+        "replicas": 3,
+        "mem_gib": 0.17,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "memoryguard": {
+        "replicas": 1,
+        "mem_gib": 0.05,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "node": {
+        "replicas": 6,
+        "mem_gib": 1.24,
+        "ksm_merging_mib": 2.2,
+        "ksm_zero_mib": 0.4
+      },
+      "python": {
+        "replicas": 6,
+        "mem_gib": 1.36,
+        "ksm_merging_mib": 2.8,
+        "ksm_zero_mib": 0.6
+      },
+      "redis": {
+        "replicas": 2,
+        "mem_gib": 0.35,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      }
+    },
+    "latency": {
+      "java-pretouch": {
+        "rps": 574.6,
+        "p50": 16.9,
+        "p99": 37.2,
+        "p99_worst": 13086.3,
+        "errors": 0
+      },
+      "java-plain": {
+        "rps": 574.6,
+        "p50": 17.0,
+        "p99": 37.0,
+        "p99_worst": 15136.9,
+        "errors": 0
+      },
+      "python": {
+        "rps": 572.0,
+        "p50": 17.2,
+        "p99": 37.3,
+        "p99_worst": 13093.1,
+        "errors": 0
+      },
+      "node": {
+        "rps": 572.5,
+        "p50": 16.9,
+        "p99": 37.2,
+        "p99_worst": 11019.4,
+        "errors": 0
+      }
+    }
+  },
+  "R4-done": {
+    "samples": 5,
+    "used_gib": 21.87,
+    "avail_pct": 14.0,
+    "swap_used_gib": 0.5,
+    "pages_shared": 4969,
+    "pages_sharing": 17276,
+    "ksm_zero_pages": 588396,
+    "saved_sharing_gib": 0.07,
+    "saved_zero_gib": 2.24,
+    "general_profit_gib": 2.02,
+    "max_page_sharing": 16,
+    "pages_to_scan": [
+      635
+    ],
+    "sleep_ms": [
+      8
+    ],
+    "full_scans": 5,
+    "sys_cpu_pct": 2.06,
+    "busy_cpu_pct": 4.57,
+    "groups": {
+      "collector": {
+        "replicas": 1,
+        "mem_gib": 0.02,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "java-plain": {
+        "replicas": 6,
+        "mem_gib": 5.59,
+        "ksm_merging_mib": 10.2,
+        "ksm_zero_mib": 88.8
+      },
+      "java-pretouch": {
+        "replicas": 8,
+        "mem_gib": 10.67,
+        "ksm_merging_mib": 70.9,
+        "ksm_zero_mib": 2208.5
+      },
+      "loadgen": {
+        "replicas": 3,
+        "mem_gib": 0.17,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      },
+      "node": {
+        "replicas": 6,
+        "mem_gib": 1.24,
+        "ksm_merging_mib": 3.7,
+        "ksm_zero_mib": 0.5
+      },
+      "python": {
+        "replicas": 6,
+        "mem_gib": 1.35,
+        "ksm_merging_mib": 2.1,
+        "ksm_zero_mib": 0.6
+      },
+      "redis": {
+        "replicas": 2,
+        "mem_gib": 0.35,
+        "ksm_merging_mib": 0.0,
+        "ksm_zero_mib": 0.0
+      }
+    },
+    "latency": {
+      "java-pretouch": {
+        "rps": 0.1,
+        "p50": 20020.8,
+        "p99": 20023.6,
+        "p99_worst": 20027.6,
+        "errors": 0
+      },
+      "java-plain": {
+        "rps": 0.1,
+        "p50": 20020.8,
+        "p99": 20020.8,
+        "p99_worst": 21049.3,
+        "errors": 0
+      },
+      "python": {
+        "rps": 0.1,
+        "p50": 20021.8,
+        "p99": 20027.3,
+        "p99_worst": 20030.7,
+        "errors": 0
+      },
+      "node": {
+        "rps": 0.1,
+        "p50": 18574.3,
+        "p99": 18574.3,
+        "p99_worst": 20020.2,
+        "errors": 0
+      }
+    }
+  }
+}
