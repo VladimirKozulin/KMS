@@ -1,7 +1,0 @@
-/mnt/c/Users/vladi/Desktop/CodeProjects/Memory/memoryguard/src/main/java/dev/memoryguard/Main.java
-/mnt/c/Users/vladi/Desktop/CodeProjects/Memory/memoryguard/src/main/java/dev/memoryguard/containers/DockerClient.java
-/mnt/c/Users/vladi/Desktop/CodeProjects/Memory/memoryguard/src/main/java/dev/memoryguard/ksm/KsmController.java
-/mnt/c/Users/vladi/Desktop/CodeProjects/Memory/memoryguard/src/main/java/dev/memoryguard/ksm/KsmTuner.java
-/mnt/c/Users/vladi/Desktop/CodeProjects/Memory/memoryguard/src/main/java/dev/memoryguard/metrics/MetricsCollector.java
-/mnt/c/Users/vladi/Desktop/CodeProjects/Memory/memoryguard/src/main/java/dev/memoryguard/web/ApiHandlers.java
-/mnt/c/Users/vladi/Desktop/CodeProjects/Memory/memoryguard/src/main/java/dev/memoryguard/web/ApiServer.java
